@@ -1,7 +1,7 @@
 name: Build Globe IPA
 
 on:
-  workflow_dispatch: # Allows you to click a button to run it
+  workflow_dispatch:
 
 jobs:
   build:
@@ -60,7 +60,8 @@ jobs:
 
       - name: Compile App Binary
         run: |
-          xcrun -sdk iphoneos swiftc -parse-as-library -target arm64-apple-ios16.0 App.swift -o GlobeApp
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          swiftc -sdk "$SDK_PATH" -target arm64-apple-ios16.0 -parse-as-library App.swift -o GlobeApp
 
       - name: Package into IPA
         run: |
