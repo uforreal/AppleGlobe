@@ -285,18 +285,18 @@ jobs:
                           // Top-Right Floating Controls (Flighty Replica)
                           VStack(spacing: 8) {
                               // Element 1: 2-Button Pill (Map & Outlined Cloud)
-                              VStack(spacing: 0) {
+                              VStack(spacing: 2) {
                                   Button(action: {}) {
                                       Image(systemName: "map.fill")
-                                          .font(.system(size: 17, weight: .medium))
+                                          .font(.system(size: 18, weight: .medium))
                                           .foregroundColor(.white)
-                                          .frame(width: 42, height: 38)
+                                          .frame(width: 45, height: 40)
                                   }
                                   Button(action: {}) {
                                       Image(systemName: "cloud")
                                           .font(.system(size: 17, weight: .medium))
                                           .foregroundColor(.white)
-                                          .frame(width: 42, height: 38)
+                                          .frame(width: 45, height: 40)
                                   }
                               }
                               .padding(.vertical, 4)
@@ -307,19 +307,18 @@ jobs:
                               // Element 2: Standalone Circular ATC Tower Button
                               Button(action: {}) {
                                   FlightyATCTowerIcon()
-                                      .frame(width: 42, height: 42)
+                                      .frame(width: 45, height: 45)
                                       .background(Color(red: 0.10, green: 0.14, blue: 0.20).opacity(0.85))
                                       .clipShape(Circle())
                                       .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
                               }
                           }
-                          // Shifted up from 56 -> 36 to sit right under status bar
-                          .padding(.top, 36)
-                          .padding(.trailing, 16)
+                          // Exact Flighty alignment: 28pt from top, 11pt from right edge
+                          .padding(.top, 28)
+                          .padding(.trailing, 11)
                       }
                       .sheet(isPresented: $showSheet) {
                           FlightySheetView()
-                              // 0.34 (restored collapsed height) -> 0.61 (middle) -> .large
                               .presentationDetents(
                                   [.fraction(0.34), .fraction(0.61), .large],
                                   selection: $sheetDetent
