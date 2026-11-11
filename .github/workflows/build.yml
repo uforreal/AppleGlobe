@@ -17,81 +17,111 @@ jobs:
           import SwiftUI
           import MapKit
 
-          // MARK: - 1. Custom Air Traffic Control Tower Icon
-          struct FlightyATCTowerIcon: View {
-              var body: some View {
-                  ZStack {
-                      // Spire
-                      Path { p in
-                          p.move(to: CGPoint(x: 9, y: 0.5))
-                          p.addLine(to: CGPoint(x: 9, y: 3))
-                      }
-                      .stroke(Color.white, lineWidth: 1.6)
+          // MARK: - 0. Helpers
 
-                      // Tower Silhouette
-                      Path { p in
-                          // Roof slab
-                          p.move(to: CGPoint(x: 4.5, y: 3))
-                          p.addLine(to: CGPoint(x: 13.5, y: 3))
-                          // Cab upper angle
-                          p.addLine(to: CGPoint(x: 15.5, y: 6.5))
-                          // Cab lower taper
-                          p.addLine(to: CGPoint(x: 12.5, y: 10.5))
-                          // Shaft right
-                          p.addLine(to: CGPoint(x: 11.2, y: 16))
-                          // Base flare
-                          p.addLine(to: CGPoint(x: 14.5, y: 19))
-                          p.addLine(to: CGPoint(x: 3.5, y: 19))
-                          // Base left flare
-                          p.addLine(to: CGPoint(x: 6.8, y: 16))
-                          // Shaft left
-                          p.addLine(to: CGPoint(x: 5.5, y: 10.5))
-                          // Cab lower left
-                          p.addLine(to: CGPoint(x: 2.5, y: 6.5))
-                          p.closeSubpath()
-                      }
-                      .fill(Color.white)
-
-                      // Window band cutout
-                      Path { p in
-                          p.move(to: CGPoint(x: 4.6, y: 6.5))
-                          p.addLine(to: CGPoint(x: 13.4, y: 6.5))
-                          p.addLine(to: CGPoint(x: 12.0, y: 8.8))
-                          p.addLine(to: CGPoint(x: 6.0, y: 8.8))
-                          p.closeSubpath()
-                      }
-                      .fill(Color(red: 0.10, green: 0.14, blue: 0.20))
-
-                      // Vertical window divider
-                      Rectangle()
-                          .fill(Color.white)
-                          .frame(width: 1.2, height: 2.3)
-                          .offset(y: -2.3)
+          extension View {
+              /// Liquid Glass on iOS 26. Falls back to a plain fill on older systems.
+              @ViewBuilder
+              func flightyGlass<S: Shape>(in shape: S, fallback: Color) -> some View {
+                  #if compiler(>=6.2)
+                  if #available(iOS 26.0, *) {
+                      self.glassEffect(.regular, in: shape)
+                  } else {
+                      self.background(fallback, in: shape)
+                          .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
                   }
-                  .frame(width: 18, height: 21)
+                  #else
+                  self.background(fallback, in: shape)
+                      .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
+                  #endif
               }
           }
 
-          // MARK: - 2. Custom Dock Icons
+          // MARK: - 1. Air Traffic Control Tower Icon
+
+          struct ATCTowerShape: Shape {
+              func path(in rect: CGRect) -> Path {
+                  let sx = rect.width / 20
+                  let sy = rect.height / 24
+                  func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+                      CGPoint(x: rect.minX + x * sx, y: rect.minY + y * sy)
+                  }
+                  func box(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> CGRect {
+                      CGRect(x: rect.minX + x * sx, y: rect.minY + y * sy, width: w * sx, height: h * sy)
+                  }
+
+                  var path = Path()
+
+                  // Antenna
+                  path.addRect(box(9.3, 0, 1.4, 3))
+                  // Roof slab
+                  path.addRect(box(2, 3, 16, 1.8))
+
+                  // Cab (wider at the top)
+                  path.move(to: pt(3, 4.8))
+                  path.addLine(to: pt(17, 4.8))
+                  path.addLine(to: pt(14, 11))
+                  path.addLine(to: pt(6, 11))
+                  path.closeSubpath()
+
+                  // Window band (hole, because of even-odd fill)
+                  path.move(to: pt(4.6, 6.3))
+                  path.addLine(to: pt(15.4, 6.3))
+                  path.addLine(to: pt(14.1, 9.2))
+                  path.addLine(to: pt(5.9, 9.2))
+                  path.closeSubpath()
+
+                  // Window divider (fills the hole again in the middle)
+                  path.addRect(box(9.4, 6.3, 1.2, 2.9))
+
+                  // Shaft
+                  path.addRect(box(8.4, 11, 3.2, 5.5))
+
+                  // Base flare
+                  path.move(to: pt(8.4, 16.5))
+                  path.addLine(to: pt(11.6, 16.5))
+                  path.addLine(to: pt(15, 22))
+                  path.addLine(to: pt(5, 22))
+                  path.closeSubpath()
+
+                  // Foot
+                  path.addRect(box(3.5, 22, 13, 1.6))
+
+                  return path
+              }
+          }
+
+          struct FlightyATCTowerIcon: View {
+              var body: some View {
+                  ATCTowerShape()
+                      .fill(Color.white, style: FillStyle(eoFill: true))
+                      .frame(width: 17, height: 20)
+              }
+          }
+
+          // MARK: - 2. Dock Icons
+
           struct FlightyAirplaneIcon: View {
+              private let blue = Color(red: 0.0, green: 0.48, blue: 1.0)
+
               var body: some View {
                   ZStack {
                       Circle()
-                          .fill(Color(red: 0.05, green: 0.47, blue: 0.99))
-                          .frame(width: 25, height: 25)
+                          .fill(blue)
+                          .frame(width: 24, height: 24)
                           .overlay(
                               Image(systemName: "airplane")
-                                  .font(.system(size: 13, weight: .bold))
+                                  .font(.system(size: 12.5, weight: .bold))
                                   .foregroundColor(.white)
                                   .rotationEffect(.degrees(-45))
                           )
-                      
+
                       ZStack {
                           Circle()
                               .fill(Color.white)
                               .frame(width: 13, height: 13)
                           Circle()
-                              .fill(Color(red: 0.05, green: 0.47, blue: 0.99))
+                              .fill(blue)
                               .frame(width: 10.5, height: 10.5)
                           Image(systemName: "person.fill")
                               .font(.system(size: 6))
@@ -108,25 +138,25 @@ jobs:
                   ZStack {
                       ZStack {
                           Image(systemName: "bubble.middle.bottom.fill")
-                              .font(.system(size: 15))
+                              .font(.system(size: 16))
                           Image(systemName: "person.fill")
-                              .font(.system(size: 6))
-                              .foregroundColor(Color(red: 0.93, green: 0.94, blue: 0.95))
+                              .font(.system(size: 6.5))
+                              .foregroundColor(Color(white: 0.94))
                               .offset(y: -1.5)
                       }
                       .offset(x: -5, y: -2)
 
                       ZStack {
                           Image(systemName: "bubble.middle.bottom.fill")
-                              .font(.system(size: 17))
+                              .font(.system(size: 18))
                           Image(systemName: "person.fill")
-                              .font(.system(size: 7))
-                              .foregroundColor(Color(red: 0.93, green: 0.94, blue: 0.95))
+                              .font(.system(size: 7.5))
+                              .foregroundColor(Color(white: 0.94))
                               .offset(y: -2)
                       }
                       .offset(x: 5, y: 2)
                   }
-                  .foregroundColor(Color(red: 0.15, green: 0.15, blue: 0.16))
+                  .foregroundColor(Color(white: 0.12))
                   .frame(width: 32, height: 28)
               }
           }
@@ -135,9 +165,9 @@ jobs:
               var body: some View {
                   ZStack {
                       RoundedRectangle(cornerRadius: 3.5)
-                          .fill(Color(red: 0.15, green: 0.15, blue: 0.16))
+                          .fill(Color(white: 0.12))
                           .frame(width: 18, height: 24)
-                      
+
                       Rectangle()
                           .fill(Color.white.opacity(0.2))
                           .frame(width: 1, height: 24)
@@ -147,7 +177,7 @@ jobs:
                           Image(systemName: "globe.americas.fill")
                               .font(.system(size: 8))
                               .foregroundColor(.white.opacity(0.9))
-                          
+
                           RoundedRectangle(cornerRadius: 0.5)
                               .fill(Color.white.opacity(0.8))
                               .frame(width: 7, height: 1.2)
@@ -157,123 +187,146 @@ jobs:
               }
           }
 
-          // MARK: - 3. Bottom Sheet View
+          struct FlightyTab<Icon: View>: View {
+              let title: String
+              let selected: Bool
+              let icon: Icon
+
+              init(title: String, selected: Bool, @ViewBuilder icon: () -> Icon) {
+                  self.title = title
+                  self.selected = selected
+                  self.icon = icon()
+              }
+
+              var body: some View {
+                  VStack(spacing: 1) {
+                      icon
+                      Text(title)
+                          .font(.system(size: 10, weight: selected ? .bold : .semibold))
+                          .foregroundColor(selected ? Color(red: 0.0, green: 0.48, blue: 1.0) : Color(white: 0.12))
+                  }
+                  .frame(maxWidth: .infinity, maxHeight: .infinity)
+                  .background {
+                      if selected {
+                          Capsule().fill(Color.black.opacity(0.07))
+                      }
+                  }
+              }
+          }
+
+          // MARK: - 3. Avatar
+
+          struct FlightyAvatar: View {
+              var body: some View {
+                  ZStack {
+                      Circle()
+                          .fill(
+                              LinearGradient(
+                                  colors: [Color(white: 0.80), Color(white: 0.62)],
+                                  startPoint: .top,
+                                  endPoint: .bottom
+                              )
+                          )
+                      Image(systemName: "person.fill")
+                          .font(.system(size: 22))
+                          .foregroundColor(.white)
+                          .offset(y: 5)
+                  }
+                  .frame(width: 38, height: 38)
+                  .clipShape(Circle())
+                  .frame(width: 44, height: 44)
+                  .flightyGlass(in: Circle(), fallback: Color.white)
+              }
+          }
+
+          // MARK: - 4. Bottom Sheet View
+
           struct FlightySheetView: View {
               var body: some View {
                   VStack(spacing: 0) {
-                      // Top Row: Title + Profile/Share Actions
+                      // Header
                       HStack(alignment: .center) {
                           Text("My Flights")
-                              .font(.system(size: 32, weight: .bold))
+                              .font(.system(size: 34, weight: .bold))
                               .foregroundColor(.black)
-                          
+
                           Spacer()
-                          
-                          HStack(spacing: 8) {
+
+                          HStack(spacing: 10) {
                               Button(action: {}) {
                                   Image(systemName: "square.and.arrow.up")
-                                      .font(.system(size: 15, weight: .semibold))
+                                      .font(.system(size: 17, weight: .semibold))
                                       .foregroundColor(.black)
-                                      .frame(width: 40, height: 40)
-                                      .background(Color(red: 0.94, green: 0.94, blue: 0.96))
-                                      .clipShape(Circle())
+                                      .frame(width: 44, height: 44)
+                                      .flightyGlass(in: Circle(), fallback: Color(white: 0.97))
                               }
-                              
+
                               Button(action: {}) {
-                                  ZStack {
-                                      Circle()
-                                          .fill(Color(red: 0.82, green: 0.82, blue: 0.85))
-                                          .frame(width: 34, height: 34)
-                                      Image(systemName: "person.fill")
-                                          .font(.system(size: 18))
-                                          .foregroundColor(.white)
-                                          .offset(y: 3)
-                                  }
-                                  .frame(width: 40, height: 40)
-                                  .background(Color(red: 0.94, green: 0.94, blue: 0.96))
-                                  .clipShape(Circle())
+                                  FlightyAvatar()
                               }
                           }
                       }
                       .padding(.horizontal, 20)
-                      .padding(.top, 16)
+                      .padding(.top, 14)
 
                       Spacer()
 
-                      // Middle: Sync Status
+                      // Sync status
                       VStack(spacing: 4) {
                           Text("Syncing...")
-                              .font(.system(size: 15, weight: .semibold))
-                              .foregroundColor(Color(red: 0.45, green: 0.46, blue: 0.48))
+                              .font(.system(size: 16, weight: .semibold))
+                              .foregroundColor(Color(white: 0.55))
                           Text("Restoring your flights")
-                              .font(.system(size: 13))
-                              .foregroundColor(Color(red: 0.58, green: 0.59, blue: 0.61))
+                              .font(.system(size: 15))
+                              .foregroundColor(Color(white: 0.62))
                       }
+                      .padding(.top, 8)
 
                       Spacer()
 
-                      // Bottom Dock
-                      HStack(spacing: 10) {
+                      // Bottom dock
+                      HStack(spacing: 8) {
                           HStack(spacing: 0) {
-                              // Tab 1: My Flights
-                              VStack(spacing: 2) {
+                              FlightyTab(title: "My Flights", selected: true) {
                                   FlightyAirplaneIcon()
-                                  Text("My Flights")
-                                      .font(.system(size: 10, weight: .bold))
-                                      .foregroundColor(Color(red: 0.05, green: 0.47, blue: 0.99))
                               }
-                              .frame(maxWidth: .infinity, maxHeight: .infinity)
-                              .background(Color.white)
-                              .clipShape(Capsule())
-                              .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
-                              .padding(4)
-
-                              // Tab 2: Friends
-                              VStack(spacing: 2) {
+                              FlightyTab(title: "Friends", selected: false) {
                                   FlightyFriendsIcon()
-                                  Text("Friends")
-                                      .font(.system(size: 10, weight: .semibold))
-                                      .foregroundColor(Color(red: 0.25, green: 0.26, blue: 0.28))
                               }
-                              .frame(maxWidth: .infinity)
-
-                              // Tab 3: Passport
-                              VStack(spacing: 2) {
+                              FlightyTab(title: "Passport", selected: false) {
                                   FlightyPassportIcon()
-                                  Text("Passport")
-                                      .font(.system(size: 10, weight: .semibold))
-                                      .foregroundColor(Color(red: 0.25, green: 0.26, blue: 0.28))
                               }
-                              .frame(maxWidth: .infinity)
                           }
-                          .frame(height: 56)
-                          .background(Color(red: 0.94, green: 0.94, blue: 0.96))
-                          .clipShape(Capsule())
+                          .padding(4)
+                          .frame(height: 62)
+                          .flightyGlass(in: Capsule(), fallback: Color(white: 0.97))
 
-                          // Global Search Button
                           Button(action: {}) {
                               Image(systemName: "magnifyingglass")
-                                  .font(.system(size: 19, weight: .bold))
+                                  .font(.system(size: 20, weight: .semibold))
                                   .foregroundColor(.black)
-                                  .frame(width: 56, height: 56)
-                                  .background(Color(red: 0.94, green: 0.94, blue: 0.96))
-                                  .clipShape(Circle())
+                                  .frame(width: 62, height: 62)
+                                  .flightyGlass(in: Circle(), fallback: Color(white: 0.97))
                           }
                       }
-                      .padding(.horizontal, 16)
-                      .padding(.bottom, 14)
+                      .padding(.horizontal, 18)
+                      .padding(.bottom, 18)
                   }
                   .frame(maxWidth: .infinity, maxHeight: .infinity)
                   .background(Color.white)
                   .ignoresSafeArea(edges: .bottom)
+                  .persistentSystemOverlays(.hidden)
               }
           }
 
-          // MARK: - 4. Main App Entry
+          // MARK: - 5. Main App Entry
+
           @main
           struct GlobeApp: App {
               @State private var showSheet = true
-              @State private var sheetDetent: PresentationDetent = .fraction(0.34)
+              @State private var sheetDetent: PresentationDetent = .height(272)
+
+              private let darkGlass = Color(red: 0.10, green: 0.14, blue: 0.20).opacity(0.85)
 
               var body: some Scene {
                   WindowGroup {
@@ -282,51 +335,47 @@ jobs:
                               .mapStyle(.hybrid(elevation: .realistic))
                               .ignoresSafeArea()
 
-                          // Top-Right Floating Controls (Flighty Replica)
+                          // Top-right floating controls
                           VStack(spacing: 8) {
-                              // Element 1: 2-Button Pill (Map & Outlined Cloud)
-                              VStack(spacing: 2) {
+                              VStack(spacing: 0) {
                                   Button(action: {}) {
                                       Image(systemName: "map.fill")
                                           .font(.system(size: 18, weight: .medium))
                                           .foregroundColor(.white)
-                                          .frame(width: 45, height: 40)
+                                          .frame(width: 43, height: 40)
                                   }
                                   Button(action: {}) {
                                       Image(systemName: "cloud")
-                                          .font(.system(size: 17, weight: .medium))
+                                          .font(.system(size: 18, weight: .medium))
                                           .foregroundColor(.white)
-                                          .frame(width: 45, height: 40)
+                                          .frame(width: 43, height: 40)
                                   }
                               }
-                              .padding(.vertical, 4)
-                              .background(Color(red: 0.10, green: 0.14, blue: 0.20).opacity(0.85))
-                              .clipShape(Capsule())
-                              .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
+                              .padding(.vertical, 2)
+                              .flightyGlass(in: Capsule(), fallback: darkGlass)
 
-                              // Element 2: Standalone Circular ATC Tower Button
                               Button(action: {}) {
                                   FlightyATCTowerIcon()
-                                      .frame(width: 45, height: 45)
-                                      .background(Color(red: 0.10, green: 0.14, blue: 0.20).opacity(0.85))
-                                      .clipShape(Circle())
-                                      .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
+                                      .frame(width: 43, height: 43)
+                                      .flightyGlass(in: Circle(), fallback: darkGlass)
                               }
                           }
-                          // Exact Flighty alignment: 28pt from top, 11pt from right edge
-                          .padding(.top, 28)
-                          .padding(.trailing, 11)
+                          .environment(\.colorScheme, .dark)
+                          .padding(.top, 22)
+                          .padding(.trailing, 16)
                       }
+                      .persistentSystemOverlays(.hidden)
                       .sheet(isPresented: $showSheet) {
                           FlightySheetView()
                               .presentationDetents(
-                                  [.fraction(0.34), .fraction(0.61), .large],
+                                  [.height(272), .fraction(0.6), .large],
                                   selection: $sheetDetent
                               )
                               .interactiveDismissDisabled(true)
                               .presentationDragIndicator(.hidden)
-                              .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.61)))
-                              .presentationCornerRadius(32)
+                              .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.6)))
+                              .presentationCornerRadius(42)
+                              .presentationBackground(Color.white)
                       }
                   }
               }
