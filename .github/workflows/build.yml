@@ -212,7 +212,6 @@ jobs:
           @main
           struct GlobeApp: App {
               @State private var showSheet = true
-              // Starts locked to the minimum floor (0.30)
               @State private var sheetDetent: PresentationDetent = .fraction(0.30)
 
               var body: some Scene {
@@ -256,16 +255,14 @@ jobs:
                       }
                       .sheet(isPresented: $showSheet) {
                           FlightySheetView()
-                              // 3 stages: Minimum (0.30) -> Middle (0.58) -> Expanded (.large)
+                              // Adjusted middle detent from 0.58 -> 0.65 to align right under ATLAS
                               .presentationDetents(
-                                  [.fraction(0.30), .fraction(0.58), .large],
+                                  [.fraction(0.30), .fraction(0.65), .large],
                                   selection: $sheetDetent
                               )
-                              // Locks 0.30 as the minimum floor (no dragging down past it)
                               .interactiveDismissDisabled(true)
                               .presentationDragIndicator(.hidden)
-                              // Map stays interactive at both collapsed and middle stages
-                              .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.58)))
+                              .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.65)))
                               .presentationCornerRadius(32)
                       }
                   }
