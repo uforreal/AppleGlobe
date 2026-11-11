@@ -16,11 +16,12 @@ jobs:
           cat << 'EOF' > App.swift
           import SwiftUI
           import MapKit
+          import UIKit
 
           // MARK: - 0. Helpers
 
           extension View {
-              /// Liquid Glass on iOS 26. Falls back to a plain fill on older systems.
+              /// Liquid Glass effect with fallback
               @ViewBuilder
               func flightyGlass<S: Shape>(in shape: S, fallback: Color) -> some View {
                   #if compiler(>=6.2)
@@ -64,14 +65,14 @@ jobs:
                   path.addLine(to: pt(6, 11))
                   path.closeSubpath()
 
-                  // Window band (hole, because of even-odd fill)
+                  // Window band
                   path.move(to: pt(4.6, 6.3))
                   path.addLine(to: pt(15.4, 6.3))
                   path.addLine(to: pt(14.1, 9.2))
                   path.addLine(to: pt(5.9, 9.2))
                   path.closeSubpath()
 
-                  // Window divider (fills the hole again in the middle)
+                  // Window divider
                   path.addRect(box(9.4, 6.3, 1.2, 2.9))
 
                   // Shaft
@@ -239,9 +240,118 @@ jobs:
               }
           }
 
-          // MARK: - 4. Bottom Sheet View
+          // MARK: - 4. Native Flight Search Modal
+
+          struct FlightySearchView: View {
+              @Environment(\.dismiss) private var dismiss
+              @State private var searchText = ""
+              @FocusState private var isFieldFocused: Bool
+
+              var body: some View {
+                  VStack(spacing: 0) {
+                      // Apple Native Text Input Bar
+                      HStack(spacing: 12) {
+                          HStack(spacing: 8) {
+                              Image(systemName: "magnifyingglass")
+                                  .foregroundColor(.secondary)
+                                  .font(.system(size: 17, weight: .medium))
+
+                              TextField("Flight #, route, or airline", text: $searchText)
+                                  .font(.system(size: 16))
+                                  .autocorrectionDisabled()
+                                  .textInputAutocapitalization(.characters)
+                                  .focused($isFieldFocused)
+
+                              if !searchText.isEmpty {
+                                  Button(action: { searchText = "" }) {
+                                      Image(systemName: "xmark.circle.fill")
+                                          .foregroundColor(.secondary)
+                                          .font(.system(size: 16))
+                                  }
+                              }
+                          }
+                          .padding(.horizontal, 12)
+                          .padding(.vertical, 10)
+                          .background(Color(uiColor: .secondarySystemBackground))
+                          .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                          Button("Cancel") {
+                              dismiss()
+                          }
+                          .font(.system(size: 16, weight: .regular))
+                          .foregroundColor(.blue)
+                      }
+                      .padding(.horizontal, 16)
+                      .padding(.top, 16)
+                      .padding(.bottom, 12)
+
+                      Divider()
+
+                      // Search Results & Suggestions
+                      List {
+                          if searchText.isEmpty {
+                              Section("Recent Searches") {
+                                  HStack(spacing: 12) {
+                                      Image(systemName: "airplane.departure")
+                                          .font(.system(size: 18))
+                                          .foregroundColor(.blue)
+                                      VStack(alignment: .leading, spacing: 2) {
+                                          Text("AA 100 · JFK → LHR")
+                                              .font(.system(size: 15, weight: .semibold))
+                                          Text("American Airlines · Boeing 777-300ER")
+                                              .font(.system(size: 12))
+                                              .foregroundColor(.secondary)
+                                      }
+                                  }
+                                  .padding(.vertical, 2)
+
+                                  HStack(spacing: 12) {
+                                      Image(systemName: "airplane.departure")
+                                          .font(.system(size: 18))
+                                          .foregroundColor(.blue)
+                                      VStack(alignment: .leading, spacing: 2) {
+                                          Text("DL 412 · LAX → JFK")
+                                              .font(.system(size: 15, weight: .semibold))
+                                          Text("Delta Air Lines · Airbus A321neo")
+                                              .font(.system(size: 12))
+                                              .foregroundColor(.secondary)
+                                      }
+                                  }
+                                  .padding(.vertical, 2)
+                              }
+                          } else {
+                              Section("Matching Flights") {
+                                  HStack(spacing: 12) {
+                                      Image(systemName: "airplane")
+                                          .font(.system(size: 18))
+                                          .foregroundColor(.blue)
+                                      VStack(alignment: .leading, spacing: 2) {
+                                          Text("Flight \(searchText.uppercased())")
+                                              .font(.system(size: 15, weight: .semibold))
+                                          Text("Tap to view live flight status on the globe")
+                                              .font(.system(size: 12))
+                                              .foregroundColor(.secondary)
+                                      }
+                                  }
+                                  .padding(.vertical, 2)
+                              }
+                          }
+                      }
+                      .listStyle(.insetGrouped)
+                  }
+                  .onAppear {
+                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                          isFieldFocused = true
+                      }
+                  }
+              }
+          }
+
+          // MARK: - 5. Bottom Sheet View
 
           struct FlightySheetView: View {
+              @State private var showSearch = false
+
               var body: some View {
                   VStack(spacing: 0) {
                       // Header
@@ -301,7 +411,8 @@ jobs:
                           .frame(height: 62)
                           .flightyGlass(in: Capsule(), fallback: Color(white: 0.97))
 
-                          Button(action: {}) {
+                          // Tapping this opens Apple's search input bar
+                          Button(action: { showSearch = true }) {
                               Image(systemName: "magnifyingglass")
                                   .font(.system(size: 20, weight: .semibold))
                                   .foregroundColor(.black)
@@ -316,10 +427,15 @@ jobs:
                   .background(Color.white)
                   .ignoresSafeArea(edges: .bottom)
                   .persistentSystemOverlays(.hidden)
+                  .sheet(isPresented: $showSearch) {
+                      FlightySearchView()
+                          .presentationDetents([.large])
+                          .presentationDragIndicator(.visible)
+                  }
               }
           }
 
-          // MARK: - 5. Main App Entry
+          // MARK: - 6. Main App Entry
 
           @main
           struct GlobeApp: App {
