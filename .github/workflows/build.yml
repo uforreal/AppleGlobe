@@ -17,10 +17,87 @@ jobs:
           import SwiftUI
           import MapKit
 
+          // MARK: - Custom Flighty Dock Icons
+          struct FlightyAirplaneIcon: View {
+              var body: some View {
+                  ZStack {
+                      Circle()
+                          .fill(Color(red: 0.05, green: 0.45, blue: 0.98))
+                          .frame(width: 21, height: 21)
+                      Image(systemName: "airplane")
+                          .font(.system(size: 11, weight: .bold))
+                          .foregroundColor(.white)
+                          .offset(x: -2, y: -2)
+                      Image(systemName: "person.fill")
+                          .font(.system(size: 6.5))
+                          .foregroundColor(.white)
+                          .offset(x: 4.5, y: 4.5)
+                  }
+                  .frame(height: 22)
+              }
+          }
+
+          struct FlightyFriendsIcon: View {
+              var body: some View {
+                  ZStack {
+                      // Left chat bubble with avatar
+                      ZStack {
+                          Image(systemName: "bubble.left.fill")
+                              .font(.system(size: 13))
+                          Image(systemName: "person.fill")
+                              .font(.system(size: 5.5))
+                              .foregroundColor(Color(red: 0.93, green: 0.94, blue: 0.95))
+                              .offset(x: -1, y: -2)
+                      }
+                      .offset(x: -4.5, y: -1.5)
+
+                      // Right chat bubble with avatar
+                      ZStack {
+                          Image(systemName: "bubble.right.fill")
+                              .font(.system(size: 11.5))
+                          Image(systemName: "person.fill")
+                              .font(.system(size: 4.5))
+                              .foregroundColor(Color(red: 0.93, green: 0.94, blue: 0.95))
+                              .offset(x: 1, y: -1)
+                      }
+                      .offset(x: 4.5, y: 2.5)
+                  }
+                  .foregroundColor(Color(red: 0.22, green: 0.23, blue: 0.25))
+                  .frame(height: 22)
+              }
+          }
+
+          struct FlightyPassportIcon: View {
+              var body: some View {
+                  ZStack {
+                      RoundedRectangle(cornerRadius: 2.5)
+                          .fill(Color(red: 0.22, green: 0.23, blue: 0.25))
+                          .frame(width: 15, height: 20)
+                      
+                      VStack(spacing: 2) {
+                          Image(systemName: "globe.americas.fill")
+                              .font(.system(size: 6.5))
+                              .foregroundColor(.white.opacity(0.85))
+                          
+                          VStack(spacing: 1) {
+                              RoundedRectangle(cornerRadius: 0.5)
+                                  .fill(Color.white.opacity(0.75))
+                                  .frame(width: 7, height: 1)
+                              RoundedRectangle(cornerRadius: 0.5)
+                                  .fill(Color.white.opacity(0.75))
+                                  .frame(width: 4.5, height: 1)
+                          }
+                      }
+                  }
+                  .frame(height: 22)
+              }
+          }
+
+          // MARK: - Flighty Sheet View
           struct FlightySheetView: View {
               var body: some View {
                   VStack(spacing: 0) {
-                      // 1. Header: Title + Share & Profile Buttons
+                      // Top Row: Title + Profile/Share Actions
                       HStack(alignment: .center) {
                           Text("My Flights")
                               .font(.system(size: 32, weight: .bold))
@@ -28,22 +105,22 @@ jobs:
                           
                           Spacer()
                           
-                          HStack(spacing: 10) {
+                          HStack(spacing: 8) {
                               Button(action: {}) {
                                   Image(systemName: "square.and.arrow.up")
-                                      .font(.system(size: 16, weight: .semibold))
+                                      .font(.system(size: 15, weight: .semibold))
                                       .foregroundColor(.black)
-                                      .frame(width: 40, height: 40)
-                                      .background(Color(white: 0.94))
+                                      .frame(width: 38, height: 38)
+                                      .background(Color(red: 0.93, green: 0.94, blue: 0.95))
                                       .clipShape(Circle())
                               }
                               
                               Button(action: {}) {
                                   Image(systemName: "person.crop.circle.fill")
-                                      .font(.system(size: 30))
-                                      .foregroundColor(.gray.opacity(0.55))
-                                      .frame(width: 40, height: 40)
-                                      .background(Color(white: 0.94))
+                                      .font(.system(size: 28))
+                                      .foregroundColor(.gray.opacity(0.5))
+                                      .frame(width: 38, height: 38)
+                                      .background(Color(red: 0.93, green: 0.94, blue: 0.95))
                                       .clipShape(Circle())
                               }
                           }
@@ -51,80 +128,77 @@ jobs:
                       .padding(.horizontal, 20)
                       .padding(.top, 16)
 
-                      Spacer(minLength: 12)
+                      Spacer()
 
-                      // 2. Centered Syncing Status
+                      // Middle: Sync Status
                       VStack(spacing: 4) {
                           Text("Syncing...")
                               .font(.system(size: 15, weight: .semibold))
-                              .foregroundColor(.secondary)
+                              .foregroundColor(Color(red: 0.45, green: 0.46, blue: 0.48))
                           Text("Restoring your flights")
                               .font(.system(size: 13))
-                              .foregroundColor(.secondary.opacity(0.8))
+                              .foregroundColor(Color(red: 0.58, green: 0.59, blue: 0.61))
                       }
 
-                      Spacer(minLength: 16)
+                      Spacer()
 
-                      // 3. Adjusted Dock (Slimmer 56pt height, pinned to bottom)
-                      HStack(spacing: 10) {
-                          // Tab Capsule
+                      // Bottom Anchored Flighty Dock
+                      HStack(spacing: 8) {
+                          // Segmented Navigation Pill
                           HStack(spacing: 0) {
-                              // Tab 1: My Flights (Active Pill)
-                              VStack(spacing: 2) {
-                                  Image(systemName: "airplane.circle.fill")
-                                      .font(.system(size: 19))
+                              // Tab 1: My Flights (Active)
+                              VStack(spacing: 3) {
+                                  FlightyAirplaneIcon()
                                   Text("My Flights")
-                                      .font(.system(size: 10.5, weight: .bold))
+                                      .font(.system(size: 9.5, weight: .semibold))
+                                      .foregroundColor(Color(red: 0.05, green: 0.45, blue: 0.98))
                               }
-                              .foregroundColor(.blue)
                               .frame(maxWidth: .infinity, maxHeight: .infinity)
-                              .background(Color.white)
+                              .background(Color(red: 0.91, green: 0.94, blue: 0.99)) // Soft tint
                               .clipShape(Capsule())
-                              .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
                               .padding(3)
 
                               // Tab 2: Friends
-                              VStack(spacing: 2) {
-                                  Image(systemName: "person.2.fill")
-                                      .font(.system(size: 16))
+                              VStack(spacing: 3) {
+                                  FlightyFriendsIcon()
                                   Text("Friends")
-                                      .font(.system(size: 10.5, weight: .semibold))
+                                      .font(.system(size: 9.5, weight: .medium))
+                                      .foregroundColor(Color(red: 0.35, green: 0.36, blue: 0.38))
                               }
-                              .foregroundColor(.black.opacity(0.7))
                               .frame(maxWidth: .infinity)
 
                               // Tab 3: Passport
-                              VStack(spacing: 2) {
-                                  Image(systemName: "text.book.closed.fill")
-                                      .font(.system(size: 16))
+                              VStack(spacing: 3) {
+                                  FlightyPassportIcon()
                                   Text("Passport")
-                                      .font(.system(size: 10.5, weight: .semibold))
+                                      .font(.system(size: 9.5, weight: .medium))
+                                      .foregroundColor(Color(red: 0.35, green: 0.36, blue: 0.38))
                               }
-                              .foregroundColor(.black.opacity(0.7))
                               .frame(maxWidth: .infinity)
                           }
-                          .frame(height: 56)
-                          .background(Color(white: 0.94))
+                          .frame(height: 52)
+                          .background(Color(red: 0.93, green: 0.94, blue: 0.95))
                           .clipShape(Capsule())
 
-                          // Search Button (Aligned 56x56 circle)
+                          // Global Search Circular Button
                           Button(action: {}) {
                               Image(systemName: "magnifyingglass")
                                   .font(.system(size: 18, weight: .bold))
                                   .foregroundColor(.black)
-                                  .frame(width: 56, height: 56)
-                                  .background(Color(white: 0.94))
+                                  .frame(width: 52, height: 52)
+                                  .background(Color(red: 0.93, green: 0.94, blue: 0.95))
                                   .clipShape(Circle())
                           }
                       }
                       .padding(.horizontal, 16)
-                      .padding(.bottom, 8) // Pinned tightly to the bottom
+                      .padding(.bottom, 8)
                   }
                   .frame(maxWidth: .infinity, maxHeight: .infinity)
                   .background(Color.white)
               }
           }
 
+          // MARK: - Main App Entry
           @main
           struct GlobeApp: App {
               @State private var showSheet = true
@@ -132,34 +206,33 @@ jobs:
               var body: some Scene {
                   WindowGroup {
                       ZStack(alignment: .topTrailing) {
-                          // Hybrid 3D Globe
                           Map()
                               .mapStyle(.hybrid(elevation: .realistic))
                               .ignoresSafeArea()
 
-                          // Floating Map Tools (2 sections separated by divider like Flighty)
+                          // Top-Right Floating Controls (Layers / Weather / ATC)
                           VStack(spacing: 0) {
                               Button(action: {}) {
                                   Image(systemName: "map.fill")
-                                      .font(.system(size: 17))
+                                      .font(.system(size: 16))
                                       .foregroundColor(.white)
-                                      .frame(width: 44, height: 40)
+                                      .frame(width: 44, height: 38)
                               }
                               Button(action: {}) {
                                   Image(systemName: "cloud.fill")
-                                      .font(.system(size: 17))
+                                      .font(.system(size: 16))
                                       .foregroundColor(.white)
-                                      .frame(width: 44, height: 40)
+                                      .frame(width: 44, height: 38)
                               }
                               Divider()
-                                  .background(Color.white.opacity(0.3))
+                                  .background(Color.white.opacity(0.35))
                                   .frame(width: 26)
-                                  .padding(.vertical, 4)
+                                  .padding(.vertical, 3)
                               Button(action: {}) {
                                   Image(systemName: "antenna.radiowaves.left.and.right")
-                                      .font(.system(size: 17))
+                                      .font(.system(size: 16))
                                       .foregroundColor(.white)
-                                      .frame(width: 44, height: 40)
+                                      .frame(width: 44, height: 38)
                               }
                           }
                           .padding(.vertical, 6)
@@ -169,7 +242,6 @@ jobs:
                           .padding(.top, 56)
                           .padding(.trailing, 16)
                       }
-                      // Reduced height to 0.32 so it leaves the gap below ARGELIA
                       .sheet(isPresented: $showSheet) {
                           FlightySheetView()
                               .presentationDetents([.fraction(0.32), .fraction(0.88)])
