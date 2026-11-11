@@ -10,7 +10,6 @@ jobs:
       - name: Select Xcode
         run: |
           sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
-          xcrun --sdk iphoneos --show-sdk-path
 
       - name: Create Swift App Code
         run: |
@@ -50,7 +49,7 @@ jobs:
               <key>CFBundleVersion</key>
               <string>1</string>
               <key>MinimumOSVersion</key>
-              <string>16.0</string>
+              <string>17.0</string>
               <key>UILaunchScreen</key>
               <dict/>
               <key>UISupportedInterfaceOrientations</key>
@@ -66,7 +65,7 @@ jobs:
       - name: Compile App Binary
         run: |
           SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
-          swiftc -sdk "$SDK_PATH" -target arm64-apple-ios16.0 -parse-as-library -framework SwiftUI -framework MapKit -framework UIKit App.swift -o GlobeApp
+          swiftc -sdk "$SDK_PATH" -target arm64-apple-ios17.0 -parse-as-library -framework SwiftUI -framework MapKit -framework UIKit App.swift -o GlobeApp
 
       - name: Package into IPA
         run: |
