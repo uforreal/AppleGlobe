@@ -200,11 +200,11 @@ jobs:
                           }
                       }
                       .padding(.horizontal, 16)
-                      .padding(.bottom, 14) // <-- Stripped Apple's double buffer, tight 14pt fit
+                      .padding(.bottom, 14)
                   }
                   .frame(maxWidth: .infinity, maxHeight: .infinity)
                   .background(Color.white)
-                  .ignoresSafeArea(edges: .bottom) // <-- Removes Apple's default 34pt safe-area padding
+                  .ignoresSafeArea(edges: .bottom)
               }
           }
 
@@ -254,7 +254,10 @@ jobs:
                       }
                       .sheet(isPresented: $showSheet) {
                           FlightySheetView()
-                              .presentationDetents([.fraction(0.30), .fraction(0.88)])
+                              // 0.30 is the minimum resting height; .large reaches the top status bar
+                              .presentationDetents([.fraction(0.30), .large])
+                              // Prevents dragging down or dismissing past the 0.30 minimum size
+                              .interactiveDismissDisabled(true)
                               .presentationDragIndicator(.hidden)
                               .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.30)))
                               .presentationCornerRadius(32)
