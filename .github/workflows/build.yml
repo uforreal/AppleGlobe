@@ -1,0 +1,76 @@
+name: Build Globe IPA
+
+on:
+  workflow_dispatch: # Allows you to click a button to run it
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Create Swift App Code
+        run: |
+          cat << 'EOF' > App.swift
+          import SwiftUI
+          import MapKit
+
+          @main
+          struct GlobeApp: App {
+              var body: some Scene {
+                  WindowGroup {
+                      Map()
+                          .mapStyle(.imagery(elevation: .realistic))
+                          .ignoresSafeArea()
+                  }
+              }
+          }
+          EOF
+
+      - name: Create Info.plist
+        run: |
+          cat << 'EOF' > Info.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>GlobeApp</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.custom.globe</string>
+              <key>CFBundleName</key>
+              <string>Globe</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
+              <key>CFBundleVersion</key>
+              <string>1</string>
+              <key>MinimumOSVersion</key>
+              <string>16.0</string>
+              <key>UILaunchScreen</key>
+              <dict/>
+              <key>UISupportedInterfaceOrientations</key>
+              <array>
+                  <string>UIInterfaceOrientationPortrait</string>
+                  <string>UIInterfaceOrientationLandscapeLeft</string>
+                  <string>UIInterfaceOrientationLandscapeRight</string>
+              </array>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Compile App Binary
+        run: |
+          xcrun -sdk iphoneos swiftc -parse-as-library -target arm64-apple-ios16.0 App.swift -o GlobeApp
+
+      - name: Package into IPA
+        run: |
+          mkdir -p Payload/GlobeApp.app
+          cp GlobeApp Payload/GlobeApp.app/
+          cp Info.plist Payload/GlobeApp.app/
+          zip -r Globe.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Globe-IPA
+          path: Globe.ipa
