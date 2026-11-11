@@ -17,57 +17,77 @@ jobs:
           import SwiftUI
           import MapKit
 
-          struct FlightCardView: View {
+          struct FlightySheetView: View {
+              @State private var selectedTab = 0
+
               var body: some View {
-                  VStack(alignment: .leading, spacing: 18) {
-                      // Glance preview (always visible in collapsed mode)
-                      HStack {
-                          VStack(alignment: .leading, spacing: 4) {
-                              Text("FLIGHT AF 022")
-                                  .font(.caption2)
-                                  .fontWeight(.bold)
-                                  .foregroundColor(.secondary)
-                              Text("CDG → JFK")
-                                  .font(.title2)
-                                  .fontWeight(.black)
-                          }
+                  VStack(spacing: 0) {
+                      // 1. Sheet Header
+                      VStack(alignment: .leading, spacing: 14) {
+                          Text("My Flights")
+                              .font(.system(size: 32, weight: .bold))
+                              .foregroundColor(.black)
+
                           Spacer()
-                          Text("ON TIME")
-                              .font(.caption)
-                              .fontWeight(.bold)
-                              .padding(.horizontal, 10)
-                              .padding(.vertical, 5)
-                              .background(Color.green.opacity(0.2))
-                              .foregroundColor(.green)
-                              .clipShape(Capsule())
+
+                          // Syncing State (exactly like Flighty)
+                          VStack(spacing: 6) {
+                              Text("Syncing...")
+                                  .font(.system(size: 15, weight: .semibold))
+                                  .foregroundColor(.secondary)
+                              Text("Restoring your flights")
+                                  .font(.system(size: 13))
+                                  .foregroundColor(.secondary.opacity(0.8))
+                          }
+                          .frame(maxWidth: .infinity)
+
+                          Spacer()
                       }
-                      .padding(.top, 8)
+                      .padding(.horizontal, 24)
+                      .padding(.top, 24)
 
-                      Divider()
+                      // 2. Flighty's Exact Bottom Tab Bar
+                      HStack(spacing: 16) {
+                          // Tab 1: My Flights (Active Pill)
+                          HStack(spacing: 8) {
+                              Image(systemName: "airplane")
+                                  .font(.subheadline)
+                              Text("My Flights")
+                                  .font(.subheadline)
+                                  .fontWeight(.semibold)
+                          }
+                          .padding(.horizontal, 16)
+                          .padding(.vertical, 10)
+                          .background(Color.blue.opacity(0.15))
+                          .foregroundColor(.blue)
+                          .clipShape(Capsule())
 
-                      // Extended flight data (revealed when pulled up)
-                      HStack(spacing: 24) {
-                          VStack(alignment: .leading) {
-                              Text("Gate").font(.caption).foregroundColor(.secondary)
-                              Text("2E").font(.headline).fontWeight(.bold)
+                          // Tab 2: Friends
+                          HStack(spacing: 6) {
+                              Image(systemName: "person.2.fill")
+                                  .font(.subheadline)
+                              Text("Friends")
+                                  .font(.subheadline)
+                                  .fontWeight(.medium)
                           }
-                          VStack(alignment: .leading) {
-                              Text("Altitude").font(.caption).foregroundColor(.secondary)
-                              Text("38,000 ft").font(.headline).fontWeight(.bold)
+                          .foregroundColor(.gray)
+
+                          // Tab 3: Passport
+                          HStack(spacing: 6) {
+                              Image(systemName: "chart.bar.fill")
+                                  .font(.subheadline)
+                              Text("Passport")
+                                  .font(.subheadline)
+                                  .fontWeight(.medium)
                           }
-                          VStack(alignment: .leading) {
-                              Text("Speed").font(.caption).foregroundColor(.secondary)
-                              Text("560 mph").font(.headline).fontWeight(.bold)
-                          }
-                          VStack(alignment: .leading) {
-                              Text("Aircraft").font(.caption).foregroundColor(.secondary)
-                              Text("A350-900").font(.headline).fontWeight(.bold)
-                          }
+                          .foregroundColor(.gray)
                       }
-
-                      Spacer()
+                      .padding(.horizontal, 20)
+                      .padding(.bottom, 24)
                   }
-                  .padding(.horizontal, 20)
+                  .frame(maxWidth: .infinity, maxHeight: .infinity)
+                  // Flighty's clean white background
+                  .background(Color.white)
               }
           }
 
@@ -77,53 +97,18 @@ jobs:
 
               var body: some Scene {
                   WindowGroup {
-                      ZStack(alignment: .bottom) {
-                          // 1. The 3D Interactive Apple Globe
-                          Map()
-                              .mapStyle(.imagery(elevation: .realistic))
-                              .ignoresSafeArea()
-
-                          // 2. The Floating Frosted-Glass Dock
-                          HStack(spacing: 34) {
-                              Button(action: {}) {
-                                  Image(systemName: "airplane")
-                                      .font(.title3)
-                                      .foregroundColor(.white)
-                              }
-                              Button(action: {}) {
-                                  Image(systemName: "globe.americas.fill")
-                                      .font(.title3)
-                                      .foregroundColor(.cyan)
-                              }
-                              Button(action: {}) {
-                                  Image(systemName: "chart.bar.fill")
-                                      .font(.title3)
-                                      .foregroundColor(.white)
-                              }
-                              Button(action: {}) {
-                                  Image(systemName: "person.fill")
-                                      .font(.title3)
-                                      .foregroundColor(.white)
-                              }
+                      // 1. Hybrid Satellite with Real Labels (Ocean & Countries)
+                      Map()
+                          .mapStyle(.hybrid(elevation: .realistic))
+                          .ignoresSafeArea()
+                          // 2. Flighty's Card Sheet
+                          .sheet(isPresented: $showSheet) {
+                              FlightySheetView()
+                                  .presentationDetents([.fraction(0.38), .fraction(0.88)])
+                                  .presentationDragIndicator(.hidden)
+                                  .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.38)))
+                                  .presentationCornerRadius(34)
                           }
-                          .padding(.horizontal, 24)
-                          .padding(.vertical, 14)
-                          // Native Apple frosted-glass shader
-                          .background(.ultraThinMaterial, in: Capsule())
-                          .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 1))
-                          .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
-                          .padding(.bottom, 135) // Sits above the resting card
-                      }
-                      // 3. Apple Maps / Flighty Bottom Sheet
-                      .sheet(isPresented: $showSheet) {
-                          FlightCardView()
-                              // 3 snap heights: peek, half screen, near full
-                              .presentationDetents([.height(115), .medium, .fraction(0.85)])
-                              .presentationDragIndicator(.visible)
-                              // Crucial: lets you spin the Earth while sheet is visible
-                              .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-                              .presentationCornerRadius(28)
-                      }
                   }
               }
           }
@@ -141,7 +126,7 @@ jobs:
               <key>CFBundleIdentifier</key>
               <string>com.custom.globe</string>
               <key>CFBundleName</key>
-              <string>Globe</string>
+              <string>Flighty</string>
               <key>CFBundlePackageType</key>
               <string>APPL</string>
               <key>CFBundleShortVersionString</key>
