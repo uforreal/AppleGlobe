@@ -151,7 +151,7 @@ jobs:
 
                       Spacer()
 
-                      // Bottom Dock (Tight bottom clearance)
+                      // Bottom Dock (Tightly anchored)
                       HStack(spacing: 10) {
                           HStack(spacing: 0) {
                               // Tab 1: My Flights
@@ -212,6 +212,8 @@ jobs:
           @main
           struct GlobeApp: App {
               @State private var showSheet = true
+              // Starts locked to the minimum floor (0.30)
+              @State private var sheetDetent: PresentationDetent = .fraction(0.30)
 
               var body: some Scene {
                   WindowGroup {
@@ -254,12 +256,16 @@ jobs:
                       }
                       .sheet(isPresented: $showSheet) {
                           FlightySheetView()
-                              // 0.30 is the minimum resting height; .large reaches the top status bar
-                              .presentationDetents([.fraction(0.30), .large])
-                              // Prevents dragging down or dismissing past the 0.30 minimum size
+                              // 3 stages: Minimum (0.30) -> Middle (0.58) -> Expanded (.large)
+                              .presentationDetents(
+                                  [.fraction(0.30), .fraction(0.58), .large],
+                                  selection: $sheetDetent
+                              )
+                              // Locks 0.30 as the minimum floor (no dragging down past it)
                               .interactiveDismissDisabled(true)
                               .presentationDragIndicator(.hidden)
-                              .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.30)))
+                              // Map stays interactive at both collapsed and middle stages
+                              .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.58)))
                               .presentationCornerRadius(32)
                       }
                   }
