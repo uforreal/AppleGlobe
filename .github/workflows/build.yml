@@ -18,75 +18,111 @@ jobs:
           import MapKit
 
           struct FlightySheetView: View {
-              @State private var selectedTab = 0
-
               var body: some View {
                   VStack(spacing: 0) {
-                      // 1. Sheet Header
-                      VStack(alignment: .leading, spacing: 14) {
+                      // 1. Header with Title + Share & Profile Buttons
+                      HStack(alignment: .center) {
                           Text("My Flights")
-                              .font(.system(size: 32, weight: .bold))
+                              .font(.system(size: 32, weight: .heavy))
                               .foregroundColor(.black)
-
+                          
                           Spacer()
-
-                          // Syncing State (exactly like Flighty)
-                          VStack(spacing: 6) {
-                              Text("Syncing...")
-                                  .font(.system(size: 15, weight: .semibold))
-                                  .foregroundColor(.secondary)
-                              Text("Restoring your flights")
-                                  .font(.system(size: 13))
-                                  .foregroundColor(.secondary.opacity(0.8))
+                          
+                          HStack(spacing: 12) {
+                              // Share Button
+                              Button(action: {}) {
+                                  Image(systemName: "square.and.arrow.up")
+                                      .font(.system(size: 16, weight: .semibold))
+                                      .foregroundColor(.black)
+                                      .frame(width: 44, height: 44)
+                                      .background(Color(white: 0.94))
+                                      .clipShape(Circle())
+                              }
+                              
+                              // Profile Button
+                              Button(action: {}) {
+                                  Image(systemName: "person.crop.circle.fill")
+                                      .font(.system(size: 32))
+                                      .foregroundColor(.gray.opacity(0.6))
+                                      .frame(width: 44, height: 44)
+                                      .background(Color(white: 0.94))
+                                      .clipShape(Circle())
+                              }
                           }
-                          .frame(maxWidth: .infinity)
-
-                          Spacer()
-                      }
-                      .padding(.horizontal, 24)
-                      .padding(.top, 24)
-
-                      // 2. Flighty's Exact Bottom Tab Bar
-                      HStack(spacing: 16) {
-                          // Tab 1: My Flights (Active Pill)
-                          HStack(spacing: 8) {
-                              Image(systemName: "airplane")
-                                  .font(.subheadline)
-                              Text("My Flights")
-                                  .font(.subheadline)
-                                  .fontWeight(.semibold)
-                          }
-                          .padding(.horizontal, 16)
-                          .padding(.vertical, 10)
-                          .background(Color.blue.opacity(0.15))
-                          .foregroundColor(.blue)
-                          .clipShape(Capsule())
-
-                          // Tab 2: Friends
-                          HStack(spacing: 6) {
-                              Image(systemName: "person.2.fill")
-                                  .font(.subheadline)
-                              Text("Friends")
-                                  .font(.subheadline)
-                                  .fontWeight(.medium)
-                          }
-                          .foregroundColor(.gray)
-
-                          // Tab 3: Passport
-                          HStack(spacing: 6) {
-                              Image(systemName: "chart.bar.fill")
-                                  .font(.subheadline)
-                              Text("Passport")
-                                  .font(.subheadline)
-                                  .fontWeight(.medium)
-                          }
-                          .foregroundColor(.gray)
                       }
                       .padding(.horizontal, 20)
-                      .padding(.bottom, 24)
+                      .padding(.top, 20)
+
+                      Spacer()
+
+                      // 2. Centered Syncing Status
+                      VStack(spacing: 5) {
+                          Text("Syncing...")
+                              .font(.system(size: 15, weight: .semibold))
+                              .foregroundColor(.secondary)
+                          Text("Restoring your flights")
+                              .font(.system(size: 13))
+                              .foregroundColor(.secondary.opacity(0.8))
+                      }
+
+                      Spacer()
+
+                      // 3. Flighty's Exact Two-Piece Dock
+                      HStack(spacing: 12) {
+                          // Piece A: The 3-Tab Capsule Track
+                          HStack(spacing: 0) {
+                              // Tab 1: My Flights (Active Pill)
+                              VStack(spacing: 4) {
+                                  Image(systemName: "airplane.circle.fill")
+                                      .font(.system(size: 20))
+                                  Text("My Flights")
+                                      .font(.system(size: 11, weight: .bold))
+                              }
+                              .foregroundColor(.blue)
+                              .frame(maxWidth: .infinity, maxHeight: .infinity)
+                              .background(Color.white)
+                              .clipShape(Capsule())
+                              .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
+                              .padding(4)
+
+                              // Tab 2: Friends
+                              VStack(spacing: 4) {
+                                  Image(systemName: "person.2.fill")
+                                      .font(.system(size: 17))
+                                  Text("Friends")
+                                      .font(.system(size: 11, weight: .semibold))
+                              }
+                              .foregroundColor(.black.opacity(0.75))
+                              .frame(maxWidth: .infinity)
+
+                              // Tab 3: Passport
+                              VStack(spacing: 4) {
+                                  Image(systemName: "book.pages.fill")
+                                      .font(.system(size: 17))
+                                  Text("Passport")
+                                      .font(.system(size: 11, weight: .semibold))
+                              }
+                              .foregroundColor(.black.opacity(0.75))
+                              .frame(maxWidth: .infinity)
+                          }
+                          .frame(height: 64)
+                          .background(Color(white: 0.94))
+                          .clipShape(Capsule())
+
+                          // Piece B: Freestanding Search Button
+                          Button(action: {}) {
+                              Image(systemName: "magnifyingglass")
+                                  .font(.system(size: 20, weight: .bold))
+                                  .foregroundColor(.black)
+                                  .frame(width: 64, height: 64)
+                                  .background(Color(white: 0.94))
+                                  .clipShape(Circle())
+                          }
+                      }
+                      .padding(.horizontal, 16)
+                      .padding(.bottom, 20)
                   }
                   .frame(maxWidth: .infinity, maxHeight: .infinity)
-                  // Flighty's clean white background
                   .background(Color.white)
               }
           }
@@ -97,18 +133,46 @@ jobs:
 
               var body: some Scene {
                   WindowGroup {
-                      // 1. Hybrid Satellite with Real Labels (Ocean & Countries)
-                      Map()
-                          .mapStyle(.hybrid(elevation: .realistic))
-                          .ignoresSafeArea()
-                          // 2. Flighty's Card Sheet
-                          .sheet(isPresented: $showSheet) {
-                              FlightySheetView()
-                                  .presentationDetents([.fraction(0.38), .fraction(0.88)])
-                                  .presentationDragIndicator(.hidden)
-                                  .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.38)))
-                                  .presentationCornerRadius(34)
+                      ZStack(alignment: .topTrailing) {
+                          // 1. Hybrid 3D Globe
+                          Map()
+                              .mapStyle(.hybrid(elevation: .realistic))
+                              .ignoresSafeArea()
+
+                          // 2. Floating Map Tools (Layers, Weather, ATC)
+                          VStack(spacing: 12) {
+                              Button(action: {}) {
+                                  Image(systemName: "map.fill")
+                                      .font(.system(size: 18))
+                                      .foregroundColor(.white)
+                              }
+                              Button(action: {}) {
+                                  Image(systemName: "cloud.fill")
+                                      .font(.system(size: 18))
+                                      .foregroundColor(.white)
+                              }
+                              Button(action: {}) {
+                                  Image(systemName: "antenna.radiowaves.left.and.right")
+                                      .font(.system(size: 18))
+                                      .foregroundColor(.white)
+                              }
                           }
+                          .padding(.vertical, 14)
+                          .padding(.horizontal, 10)
+                          .background(.ultraThinMaterial)
+                          .clipShape(Capsule())
+                          .shadow(color: .black.opacity(0.3), radius: 8)
+                          .padding(.top, 60)
+                          .padding(.trailing, 16)
+                      }
+                      // 3. Compact Bottom Sheet (Lower height so it doesn't cover Argelia)
+                      .sheet(isPresented: $showSheet) {
+                          FlightySheetView()
+                              .presentationDetents([.fraction(0.35), .fraction(0.88)])
+                              .presentationDragIndicator(.hidden)
+                              .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.35)))
+                              .presentationCornerRadius(38)
+                      }
                   }
               }
           }
