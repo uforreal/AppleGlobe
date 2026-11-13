@@ -17,8 +17,10 @@ jobs:
           import SwiftUI
           import MapKit
           import UIKit
+          import AVFoundation
+          import PhotosUI
 
-          // MARK: - 0. Helpers
+          // MARK: - 0. Helpers & Models
 
           extension View {
               /// Liquid Glass effect with fallback
@@ -38,7 +40,170 @@ jobs:
               }
           }
 
-          // MARK: - 1. Air Traffic Control Tower Icon
+          enum MainTab {
+              case world, friends, pins
+
+              var title: String {
+                  switch self {
+                  case .world: return "World"
+                  case .friends: return "Friends"
+                  case .pins: return "Pins"
+                  }
+              }
+          }
+
+          enum MapStyleKind {
+              case standard, satellite
+          }
+
+          enum MapLayerKind: String, CaseIterable, Identifiable {
+              case flights = "Flights"
+              case delays = "Delays"
+              case friends = "Friends"
+              var id: String { rawValue }
+          }
+
+          enum ChatFilter {
+              case all, today
+          }
+
+          enum ComposerViewMode {
+              case editor, gallery, camera
+          }
+
+          struct FeedPost: Identifiable {
+              let id = UUID()
+              let name: String
+              let handle: String
+              let time: String
+              let color: Color
+              let text: String
+              let gradient: [Color]?
+              let replies: String
+              let reposts: String
+              var likesText: String
+              var numericLikes: Int?
+              var isLiked: Bool = false
+          }
+
+          struct ChatMessage: Identifiable {
+              let id = UUID()
+              let isMe: Bool
+              let text: String
+          }
+
+          struct FriendChat: Identifiable {
+              let id = UUID()
+              let name: String
+              let color: Color
+              let time: String
+              var unread: Bool
+              let countries: Int
+              var messages: [ChatMessage]
+          }
+
+          enum AttachmentKind {
+              case image(uiImage: UIImage?, gradient: [Color])
+              case voice(bars: [CGFloat], duration: TimeInterval, url: URL?)
+          }
+
+          struct AttachmentItem: Identifiable {
+              let id = UUID()
+              let kind: AttachmentKind
+          }
+
+          enum SampleData {
+              static let brandBlue = Color(red: 0.0, green: 0.48, blue: 1.0)
+              static let composerPurple = Color(red: 94/255, green: 84/255, blue: 236/255)
+
+              static let initialPosts: [FeedPost] = [
+                  FeedPost(name: "Lina Haddad", handle: "@lina.dz", time: "2m",
+                           color: Color(red: 94/255, green: 84/255, blue: 236/255),
+                           text: "AF1284 landed in Algiers 12 minutes early. Best landing of the year ✈️",
+                           gradient: [Color(red: 1.0, green: 154/255, blue: 90/255), Color(red: 194/255, green: 69/255, blue: 107/255), Color(red: 59/255, green: 45/255, blue: 107/255)],
+                           replies: "4", reposts: "12", likesText: "86", numericLikes: 86),
+                  FeedPost(name: "ALG Airport Live", handle: "@alg_live", time: "14m",
+                           color: Color(red: 10/255, green: 132/255, blue: 1.0),
+                           text: "Gate change: flights to Paris now board at B9. Check your boarding pass before you walk to the old gate.",
+                           gradient: nil,
+                           replies: "9", reposts: "31", likesText: "142", numericLikes: 142),
+                  FeedPost(name: "Karim B.", handle: "@karim", time: "38m",
+                           color: Color(red: 48/255, green: 164/255, blue: 108/255),
+                           text: "Window seat or aisle? Defend your answer.",
+                           gradient: nil,
+                           replies: "238", reposts: "41", likesText: "1.2K", numericLikes: nil),
+                  FeedPost(name: "Sofia M.", handle: "@sofia.travels", time: "1h",
+                           color: Color(red: 229/255, green: 72/255, blue: 77/255),
+                           text: "Madrid to Algiers in 1h 40. The clouds looked wild from up here.",
+                           gradient: [Color(red: 27/255, green: 42/255, blue: 82/255), Color(red: 61/255, green: 90/255, blue: 158/255), Color(red: 159/255, green: 183/255, blue: 232/255)],
+                           replies: "7", reposts: "5", likesText: "203", numericLikes: 203),
+                  FeedPost(name: "Yacine K.", handle: "@yacine_k", time: "2h",
+                           color: Color(red: 245/255, green: 165/255, blue: 36/255),
+                           text: "Tip: the app shows delays before the airline screens do.",
+                           gradient: nil,
+                           replies: "12", reposts: "18", likesText: "377", numericLikes: 377),
+                  FeedPost(name: "Nora", handle: "@nora.flies", time: "3h",
+                           color: Color(red: 142/255, green: 78/255, blue: 198/255),
+                           text: "Passport stamps: 30 countries today 🌍",
+                           gradient: nil,
+                           replies: "21", reposts: "9", likesText: "512", numericLikes: 512)
+              ]
+
+              static let initialFriends: [FriendChat] = [
+                  FriendChat(name: "Lina Haddad", color: Color(red: 94/255, green: 84/255, blue: 236/255), time: "8:42 AM", unread: true, countries: 18, messages: [
+                      ChatMessage(isMe: true, text: "Safe flight! Text me when you land"),
+                      ChatMessage(isMe: false, text: "Landed! Waiting for my bag 😅"),
+                      ChatMessage(isMe: false, text: "Gate B9 is far from baggage claim")
+                  ]),
+                  FriendChat(name: "Karim B.", color: Color(red: 48/255, green: 164/255, blue: 108/255), time: "Yesterday", unread: false, countries: 9, messages: [
+                      ChatMessage(isMe: false, text: "Window or aisle for the Paris flight?"),
+                      ChatMessage(isMe: true, text: "Window. Always."),
+                      ChatMessage(isMe: false, text: "Bold choice. I booked the aisle.")
+                  ]),
+                  FriendChat(name: "Sofia M.", color: Color(red: 229/255, green: 72/255, blue: 77/255), time: "Tuesday", unread: false, countries: 14, messages: [
+                      ChatMessage(isMe: true, text: "How was Madrid?"),
+                      ChatMessage(isMe: false, text: "Amazing. The flight back took only 1h 40!"),
+                      ChatMessage(isMe: true, text: "Send me the photos")
+                  ]),
+                  FriendChat(name: "Yacine K.", color: Color(red: 245/255, green: 165/255, blue: 36/255), time: "Monday", unread: false, countries: 7, messages: [
+                      ChatMessage(isMe: false, text: "Your flight shows a 20 minute delay"),
+                      ChatMessage(isMe: true, text: "Thanks for the heads up!")
+                  ]),
+                  FriendChat(name: "Nora", color: Color(red: 142/255, green: 78/255, blue: 198/255), time: "11/4", unread: false, countries: 30, messages: [
+                      ChatMessage(isMe: false, text: "30 countries! My passport is full 🌍"),
+                      ChatMessage(isMe: true, text: "Congrats! Where next?"),
+                      ChatMessage(isMe: false, text: "Tokyo in March")
+                  ]),
+                  FriendChat(name: "Amine R.", color: Color(red: 15/255, green: 154/255, blue: 168/255), time: "11/2", unread: false, countries: 11, messages: [
+                      ChatMessage(isMe: true, text: "See you at the airport"),
+                      ChatMessage(isMe: false, text: "Terminal 2 at 6 PM. Do not be late")
+                  ])
+              ]
+
+              static let replies = ["Haha nice", "Send me the details", "On my way ✈️", "Let me check the app", "Same here!"]
+
+              static let photoPalettes: [[Color]] = [
+                  [Color(red: 244/255, green: 239/255, blue: 230/255), Color(red: 203/255, green: 191/255, blue: 159/255)],
+                  [Color(red: 17/255, green: 17/255, blue: 17/255), Color(red: 42/255, green: 36/255, blue: 24/255)],
+                  [Color(red: 15/255, green: 26/255, blue: 46/255), Color(red: 38/255, green: 48/255, blue: 79/255)],
+                  [Color(red: 91/255, green: 70/255, blue: 54/255), Color(red: 196/255, green: 154/255, blue: 108/255), Color(red: 58/255, green: 42/255, blue: 34/255)],
+                  [Color(red: 1.0, green: 154/255, blue: 90/255), Color(red: 194/255, green: 69/255, blue: 107/255), Color(red: 59/255, green: 45/255, blue: 107/255)],
+                  [Color(red: 27/255, green: 42/255, blue: 82/255), Color(red: 61/255, green: 90/255, blue: 158/255), Color(red: 159/255, green: 183/255, blue: 232/255)],
+                  [Color.white, Color(red: 228/255, green: 228/255, blue: 234/255)],
+                  [Color(red: 47/255, green: 107/255, blue: 74/255), Color(red: 143/255, green: 199/255, blue: 154/255)],
+                  [Color(red: 27/255, green: 20/255, blue: 16/255), Color(red: 59/255, green: 36/255, blue: 22/255)],
+                  [Color(red: 15/255, green: 154/255, blue: 168/255), Color(red: 11/255, green: 58/255, blue: 82/255)],
+                  [Color(red: 217/255, green: 214/255, blue: 208/255), Color(red: 167/255, green: 159/255, blue: 146/255)],
+                  [Color(red: 94/255, green: 84/255, blue: 236/255), Color(red: 26/255, green: 24/255, blue: 64/255)]
+              ]
+
+              static func galleryPalette(at index: Int) -> [Color] {
+                  let idx = (index * 5 + index / 4) % photoPalettes.count
+                  return photoPalettes[idx]
+              }
+          }
+
+          // MARK: - 1. Custom Icons
 
           struct ATCTowerShape: Shape {
               func path(in rect: CGRect) -> Path {
@@ -52,42 +217,31 @@ jobs:
                   }
 
                   var path = Path()
-
-                  // Antenna
                   path.addRect(box(9.3, 0, 1.4, 3))
-                  // Roof slab
                   path.addRect(box(2, 3, 16, 1.8))
 
-                  // Cab (wider at the top)
                   path.move(to: pt(3, 4.8))
                   path.addLine(to: pt(17, 4.8))
                   path.addLine(to: pt(14, 11))
                   path.addLine(to: pt(6, 11))
                   path.closeSubpath()
 
-                  // Window band
                   path.move(to: pt(4.6, 6.3))
                   path.addLine(to: pt(15.4, 6.3))
                   path.addLine(to: pt(14.1, 9.2))
                   path.addLine(to: pt(5.9, 9.2))
                   path.closeSubpath()
 
-                  // Window divider
                   path.addRect(box(9.4, 6.3, 1.2, 2.9))
-
-                  // Shaft
                   path.addRect(box(8.4, 11, 3.2, 5.5))
 
-                  // Base flare
                   path.move(to: pt(8.4, 16.5))
                   path.addLine(to: pt(11.6, 16.5))
                   path.addLine(to: pt(15, 22))
                   path.addLine(to: pt(5, 22))
                   path.closeSubpath()
 
-                  // Foot
                   path.addRect(box(3.5, 22, 13, 1.6))
-
                   return path
               }
           }
@@ -100,15 +254,14 @@ jobs:
               }
           }
 
-          // MARK: - 2. Dock Icons
-
           struct FlightyAirplaneIcon: View {
-              private let blue = Color(red: 0.0, green: 0.48, blue: 1.0)
+              let selected: Bool
+              private var tint: Color { selected ? SampleData.brandBlue : Color(white: 0.12) }
 
               var body: some View {
                   ZStack {
                       Circle()
-                          .fill(blue)
+                          .fill(tint)
                           .frame(width: 24, height: 24)
                           .overlay(
                               Image(systemName: "airplane")
@@ -122,7 +275,7 @@ jobs:
                               .fill(Color.white)
                               .frame(width: 13, height: 13)
                           Circle()
-                              .fill(blue)
+                              .fill(tint)
                               .frame(width: 10.5, height: 10.5)
                           Image(systemName: "person.fill")
                               .font(.system(size: 6))
@@ -135,6 +288,9 @@ jobs:
           }
 
           struct FlightyFriendsIcon: View {
+              let selected: Bool
+              private var tint: Color { selected ? SampleData.brandBlue : Color(white: 0.12) }
+
               var body: some View {
                   ZStack {
                       ZStack {
@@ -157,16 +313,19 @@ jobs:
                       }
                       .offset(x: 5, y: 2)
                   }
-                  .foregroundColor(Color(white: 0.12))
+                  .foregroundColor(tint)
                   .frame(width: 32, height: 28)
               }
           }
 
           struct FlightyPassportIcon: View {
+              let selected: Bool
+              private var tint: Color { selected ? SampleData.brandBlue : Color(white: 0.12) }
+
               var body: some View {
                   ZStack {
                       RoundedRectangle(cornerRadius: 3.5)
-                          .fill(Color(white: 0.12))
+                          .fill(tint)
                           .frame(width: 18, height: 24)
 
                       Rectangle()
@@ -191,31 +350,34 @@ jobs:
           struct FlightyTab<Icon: View>: View {
               let title: String
               let selected: Bool
+              let action: () -> Void
               let icon: Icon
 
-              init(title: String, selected: Bool, @ViewBuilder icon: () -> Icon) {
+              init(title: String, selected: Bool, action: @escaping () -> Void, @ViewBuilder icon: () -> Icon) {
                   self.title = title
                   self.selected = selected
+                  self.action = action
                   self.icon = icon()
               }
 
               var body: some View {
-                  VStack(spacing: 1) {
-                      icon
-                      Text(title)
-                          .font(.system(size: 10, weight: selected ? .bold : .semibold))
-                          .foregroundColor(selected ? Color(red: 0.0, green: 0.48, blue: 1.0) : Color(white: 0.12))
-                  }
-                  .frame(maxWidth: .infinity, maxHeight: .infinity)
-                  .background {
-                      if selected {
-                          Capsule().fill(Color.black.opacity(0.07))
+                  Button(action: action) {
+                      VStack(spacing: 1) {
+                          icon
+                          Text(title)
+                              .font(.system(size: 10, weight: selected ? .bold : .semibold))
+                              .foregroundColor(selected ? SampleData.brandBlue : Color(white: 0.12))
+                      }
+                      .frame(maxWidth: .infinity, maxHeight: .infinity)
+                      .background {
+                          if selected {
+                              Capsule().fill(Color.black.opacity(0.07))
+                          }
                       }
                   }
+                  .buttonStyle(.plain)
               }
           }
-
-          // MARK: - 3. Avatar
 
           struct FlightyAvatar: View {
               var body: some View {
@@ -240,225 +402,1471 @@ jobs:
               }
           }
 
-          // MARK: - 4. Native Flight Search Modal
+          // MARK: - 2. Map Style Pop-up
 
-          struct FlightySearchView: View {
-              @Environment(\.dismiss) private var dismiss
-              @State private var searchText = ""
-              @FocusState private var isFieldFocused: Bool
+          struct MapStyleMenu: View {
+              @Binding var mapStyle: MapStyleKind
+              @Binding var selectedLayers: Set<MapLayerKind>
+              let onClose: () -> Void
 
               var body: some View {
                   VStack(spacing: 0) {
-                      // Apple Native Text Input Bar
-                      HStack(spacing: 12) {
-                          HStack(spacing: 8) {
-                              Image(systemName: "magnifyingglass")
-                                  .foregroundColor(.secondary)
-                                  .font(.system(size: 17, weight: .medium))
+                      HStack(spacing: 18) {
+                          styleCard(kind: .standard, label: "Standard", colors: [Color(red: 21/255, green: 23/255, blue: 31/255), Color(red: 35/255, green: 35/255, blue: 56/255)])
+                          styleCard(kind: .satellite, label: "Satellite", colors: [Color(red: 15/255, green: 42/255, blue: 61/255), Color(red: 28/255, green: 74/255, blue: 82/255)])
+                      }
+                      .padding(.horizontal, 14)
+                      .padding(.bottom, 12)
 
-                              TextField("Flight #, route, or airline", text: $searchText)
+                      Divider().padding(.horizontal, 18)
+
+                      ForEach(MapLayerKind.allCases) { layer in
+                          let on = selectedLayers.contains(layer)
+                          Button(action: {
+                              if on { selectedLayers.remove(layer) } else { selectedLayers.insert(layer) }
+                              DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { onClose() }
+                          }) {
+                              HStack(spacing: 10) {
+                                  Image(systemName: "checkmark")
+                                      .font(.system(size: 13, weight: .bold))
+                                      .opacity(on ? 1 : 0)
+                                      .frame(width: 14)
+                                  Image(systemName: iconName(for: layer))
+                                      .font(.system(size: 16, weight: .medium))
+                                      .frame(width: 22)
+                                  Text(layer.rawValue)
+                                      .font(.system(size: 16))
+                                  Spacer()
+                              }
+                              .foregroundColor(.black)
+                              .padding(.horizontal, 16)
+                              .padding(.vertical, 10)
+                          }
+                          .buttonStyle(.plain)
+                      }
+
+                      Divider().padding(.horizontal, 18)
+
+                      Button(action: {
+                          DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { onClose() }
+                      }) {
+                          HStack {
+                              Text("Manage layers")
                                   .font(.system(size: 16))
-                                  .autocorrectionDisabled()
-                                  .textInputAutocapitalization(.characters)
-                                  .focused($isFieldFocused)
+                                  .foregroundColor(.black)
+                              Spacer()
+                          }
+                          .padding(.horizontal, 20)
+                          .padding(.vertical, 10)
+                      }
+                      .buttonStyle(.plain)
+                  }
+                  .padding(.top, 16)
+                  .padding(.bottom, 6)
+                  .frame(width: 236)
+                  .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
+                  .background(Color(white: 0.98).opacity(0.85), in: RoundedRectangle(cornerRadius: 34, style: .continuous))
+                  .shadow(color: .black.opacity(0.35), radius: 22, y: 10)
+                  .environment(\.colorScheme, .light)
+              }
 
-                              if !searchText.isEmpty {
-                                  Button(action: { searchText = "" }) {
-                                      Image(systemName: "xmark.circle.fill")
-                                          .foregroundColor(.secondary)
-                                          .font(.system(size: 16))
-                                  }
+              private func iconName(for layer: MapLayerKind) -> String {
+                  switch layer {
+                  case .flights: return "airplane"
+                  case .delays: return "calendar.badge.clock"
+                  case .friends: return "person.2"
+                  }
+              }
+
+              @ViewBuilder
+              private func styleCard(kind: MapStyleKind, label: String, colors: [Color]) -> some View {
+                  let selected = mapStyle == kind
+                  Button(action: {
+                      mapStyle = kind
+                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { onClose() }
+                  }) {
+                      VStack(spacing: 8) {
+                          ZStack(alignment: .top) {
+                              LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
+                                  .frame(width: 54, height: 94)
+                                  .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+                                  .overlay(
+                                      RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                          .stroke(selected ? SampleData.brandBlue : Color(white: 0.42), lineWidth: 3)
+                                  )
+                              Capsule()
+                                  .fill(Color.black.opacity(0.55))
+                                  .frame(width: 16, height: 5)
+                                  .padding(.top, 4)
+                          }
+
+                          Text(label)
+                              .font(.system(size: 13, weight: .medium))
+                              .foregroundColor(.black)
+
+                          ZStack {
+                              Circle()
+                                  .fill(selected ? SampleData.brandBlue : Color.clear)
+                                  .frame(width: 26, height: 26)
+                                  .overlay(
+                                      Circle().stroke(selected ? SampleData.brandBlue : Color(white: 0.42), lineWidth: 2)
+                                  )
+                              if selected {
+                                  Image(systemName: "checkmark")
+                                      .font(.system(size: 12, weight: .bold))
+                                      .foregroundColor(.white)
                               }
                           }
-                          .padding(.horizontal, 12)
-                          .padding(.vertical, 10)
-                          .background(Color(uiColor: .secondarySystemBackground))
-                          .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                      }
+                  }
+                  .buttonStyle(.plain)
+              }
+          }
 
-                          Button("Cancel") {
-                              dismiss()
+          // MARK: - 3. World Feed & Friends List
+
+          struct PostRowView: View {
+              @Binding var post: FeedPost
+
+              var body: some View {
+                  HStack(alignment: .top, spacing: 10) {
+                      Circle()
+                          .fill(post.color)
+                          .frame(width: 36, height: 36)
+                          .overlay(
+                              Text(String(post.name.prefix(1)))
+                                  .font(.system(size: 15, weight: .semibold))
+                                  .foregroundColor(.white)
+                          )
+
+                      VStack(alignment: .leading, spacing: 4) {
+                          HStack(spacing: 5) {
+                              Text(post.name)
+                                  .font(.system(size: 14, weight: .bold))
+                                  .foregroundColor(Color(red: 15/255, green: 20/255, blue: 25/255))
+                                  .lineLimit(1)
+                              Text("\(post.handle) · \(post.time)")
+                                  .font(.system(size: 14))
+                                  .foregroundColor(Color(red: 139/255, green: 141/255, blue: 147/255))
+                                  .lineLimit(1)
+                              Spacer()
                           }
-                          .font(.system(size: 16, weight: .regular))
-                          .foregroundColor(.blue)
+
+                          Text(post.text)
+                              .font(.system(size: 14))
+                              .lineSpacing(2)
+                              .foregroundColor(Color(red: 15/255, green: 20/255, blue: 25/255))
+
+                          if let gradient = post.gradient {
+                              RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                  .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
+                                  .frame(height: 118)
+                                  .padding(.top, 4)
+                          }
+
+                          HStack {
+                              actionLabel(icon: "bubble.left", value: post.replies)
+                              Spacer()
+                              actionLabel(icon: "arrow.2.squarepath", value: post.reposts)
+                              Spacer()
+                              Button(action: toggleLike) {
+                                  HStack(spacing: 4) {
+                                      Image(systemName: post.isLiked ? "heart.fill" : "heart")
+                                          .font(.system(size: 14))
+                                      Text(displayedLikes)
+                                          .font(.system(size: 12))
+                                  }
+                                  .foregroundColor(post.isLiked ? Color(red: 249/255, green: 24/255, blue: 128/255) : Color(red: 107/255, green: 112/255, blue: 120/255))
+                              }
+                              .buttonStyle(.plain)
+                              Spacer()
+                              actionLabel(icon: "square.and.arrow.up", value: "")
+                          }
+                          .frame(maxWidth: 270)
+                          .padding(.top, 4)
+                      }
+                  }
+                  .padding(.vertical, 10)
+              }
+
+              private var displayedLikes: String {
+                  if let base = post.numericLikes {
+                      return String(base + (post.isLiked ? 1 : 0))
+                  }
+                  return post.likesText
+              }
+
+              private func toggleLike() {
+                  post.isLiked.toggle()
+              }
+
+              @ViewBuilder
+              private func actionLabel(icon: String, value: String) -> some View {
+                  HStack(spacing: 4) {
+                      Image(systemName: icon).font(.system(size: 14))
+                      if !value.isEmpty { Text(value).font(.system(size: 12)) }
+                  }
+                  .foregroundColor(Color(red: 107/255, green: 112/255, blue: 120/255))
+              }
+          }
+
+          struct ChatRowView: View {
+              let friend: FriendChat
+
+              var body: some View {
+                  HStack(spacing: 12) {
+                      ZStack(alignment: .leading) {
+                          if friend.unread {
+                              Circle()
+                                  .fill(SampleData.brandBlue)
+                                  .frame(width: 9, height: 9)
+                                  .offset(x: -13)
+                          }
+                          Circle()
+                              .fill(friend.color)
+                              .frame(width: 46, height: 46)
+                              .overlay(
+                                  Text(String(friend.name.prefix(1)))
+                                      .font(.system(size: 18, weight: .semibold))
+                                      .foregroundColor(.white)
+                              )
+                      }
+
+                      VStack(alignment: .leading, spacing: 2) {
+                          HStack {
+                              Text(friend.name)
+                                  .font(.system(size: 16, weight: .semibold))
+                                  .foregroundColor(.black)
+                              Spacer()
+                              Text(friend.time)
+                                  .font(.system(size: 13))
+                                  .foregroundColor(Color(white: 0.56))
+                          }
+                          Text(friend.messages.last?.text ?? "")
+                              .font(.system(size: 14))
+                              .foregroundColor(Color(white: 0.56))
+                              .lineLimit(2)
+                      }
+                  }
+                  .padding(.vertical, 10)
+                  .contentShape(Rectangle())
+              }
+          }
+
+          // MARK: - 4. 1-on-1 Chat View
+
+          struct ChatDetailView: View {
+              @Binding var friend: FriendChat
+              let onBack: () -> Void
+
+              @State private var draft = ""
+              @FocusState private var inputFocused: Bool
+
+              var body: some View {
+                  VStack(spacing: 0) {
+                      HStack {
+                          Button(action: onBack) {
+                              Image(systemName: "chevron.left")
+                                  .font(.system(size: 18, weight: .semibold))
+                                  .foregroundColor(.black)
+                                  .frame(width: 44, height: 44)
+                                  .flightyGlass(in: Circle(), fallback: Color(white: 0.98))
+                          }
+                          Spacer()
+                          VStack(spacing: 2) {
+                              Circle()
+                                  .fill(friend.color)
+                                  .frame(width: 40, height: 40)
+                                  .overlay(
+                                      Text(String(friend.name.prefix(1)))
+                                          .font(.system(size: 16, weight: .semibold))
+                                          .foregroundColor(.white)
+                                  )
+                              Text(friend.name)
+                                  .font(.system(size: 11))
+                                  .foregroundColor(.black)
+                          }
+                          Spacer()
+                          Color.clear.frame(width: 44, height: 44)
                       }
                       .padding(.horizontal, 16)
-                      .padding(.top, 16)
-                      .padding(.bottom, 12)
+                      .padding(.top, 14)
+                      .padding(.bottom, 8)
 
                       Divider()
 
-                      // Search Results & Suggestions
-                      List {
-                          if searchText.isEmpty {
-                              Section("Recent Searches") {
-                                  HStack(spacing: 12) {
-                                      Image(systemName: "airplane.departure")
-                                          .font(.system(size: 18))
-                                          .foregroundColor(.blue)
-                                      VStack(alignment: .leading, spacing: 2) {
-                                          Text("AA 100 · JFK → LHR")
-                                              .font(.system(size: 15, weight: .semibold))
-                                          Text("American Airlines · Boeing 777-300ER")
-                                              .font(.system(size: 12))
-                                              .foregroundColor(.secondary)
-                                      }
-                                  }
-                                  .padding(.vertical, 2)
+                      ScrollViewReader { proxy in
+                          ScrollView {
+                              VStack(spacing: 5) {
+                                  Text("Today")
+                                      .font(.system(size: 11))
+                                      .foregroundColor(Color(white: 0.56))
+                                      .padding(.vertical, 4)
 
-                                  HStack(spacing: 12) {
-                                      Image(systemName: "airplane.departure")
-                                          .font(.system(size: 18))
-                                          .foregroundColor(.blue)
-                                      VStack(alignment: .leading, spacing: 2) {
-                                          Text("DL 412 · LAX → JFK")
-                                              .font(.system(size: 15, weight: .semibold))
-                                          Text("Delta Air Lines · Airbus A321neo")
-                                              .font(.system(size: 12))
-                                              .foregroundColor(.secondary)
+                                  ForEach(friend.messages) { msg in
+                                      HStack {
+                                          if msg.isMe { Spacer(minLength: 60) }
+                                          Text(msg.text)
+                                              .font(.system(size: 15))
+                                              .padding(.horizontal, 12)
+                                              .padding(.vertical, 8)
+                                              .background(msg.isMe ? SampleData.brandBlue : Color(red: 233/255, green: 233/255, blue: 235/255))
+                                              .foregroundColor(msg.isMe ? .white : .black)
+                                              .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                          if !msg.isMe { Spacer(minLength: 60) }
                                       }
+                                      .id(msg.id)
                                   }
-                                  .padding(.vertical, 2)
                               }
-                          } else {
-                              Section("Matching Flights") {
-                                  HStack(spacing: 12) {
-                                      Image(systemName: "airplane")
-                                          .font(.system(size: 18))
-                                          .foregroundColor(.blue)
-                                      VStack(alignment: .leading, spacing: 2) {
-                                          Text("Flight \(searchText.uppercased())")
-                                              .font(.system(size: 15, weight: .semibold))
-                                          Text("Tap to view live flight status on the globe")
-                                              .font(.system(size: 12))
-                                              .foregroundColor(.secondary)
-                                      }
-                                  }
-                                  .padding(.vertical, 2)
+                              .padding(.horizontal, 14)
+                              .padding(.vertical, 12)
+                          }
+                          .onChange(of: friend.messages.count) { _, _ in
+                              if let last = friend.messages.last {
+                                  withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                               }
                           }
                       }
-                      .listStyle(.insetGrouped)
+
+                      HStack(spacing: 8) {
+                          TextField("iMessage", text: $draft)
+                              .font(.system(size: 15))
+                              .padding(.horizontal, 14)
+                              .frame(height: 38)
+                              .background(Color.white, in: Capsule())
+                              .overlay(Capsule().stroke(Color(red: 209/255, green: 209/255, blue: 214/255), lineWidth: 1))
+                              .focused($inputFocused)
+                              .onSubmit(sendMessage)
+
+                          Button(action: sendMessage) {
+                              Image(systemName: "arrow.up")
+                                  .font(.system(size: 15, weight: .bold))
+                                  .foregroundColor(.white)
+                                  .frame(width: 32, height: 32)
+                                  .background(SampleData.brandBlue, in: Circle())
+                          }
+                          .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                          .opacity(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.3 : 1.0)
+                      }
+                      .padding(.horizontal, 14)
+                      .padding(.top, 6)
+                      .padding(.bottom, 18)
                   }
-                  .onAppear {
-                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                          isFieldFocused = true
+                  .background(Color.white)
+              }
+
+              private func sendMessage() {
+                  let t = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+                  guard !t.isEmpty else { return }
+                  friend.messages.append(ChatMessage(isMe: true, text: t))
+                  draft = ""
+                  DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                      let reply = SampleData.replies.randomElement() ?? "On my way ✈️"
+                      friend.messages.append(ChatMessage(isMe: false, text: reply))
+                  }
+              }
+          }
+
+          // MARK: - 5. Camera & Voice Controllers
+
+          final class CameraController: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
+              @Published var isAuthorized = false
+              @Published var isUsingFront = false
+              @Published var flashOn = false
+              let session = AVCaptureSession()
+              private let photoOutput = AVCapturePhotoOutput()
+              private let queue = DispatchQueue(label: "globe.camera.session")
+              private var photoCompletion: ((UIImage?) -> Void)?
+
+              func start() {
+                  let status = AVCaptureDevice.authorizationStatus(for: .video)
+                  switch status {
+                  case .authorized:
+                      DispatchQueue.main.async { self.isAuthorized = true }
+                      configureSession()
+                  case .notDetermined:
+                      AVCaptureDevice.requestAccess(for: .video) { granted in
+                          DispatchQueue.main.async { self.isAuthorized = granted }
+                          if granted { self.configureSession() }
+                      }
+                  default:
+                      DispatchQueue.main.async { self.isAuthorized = false }
+                  }
+              }
+
+              private func configureSession() {
+                  queue.async {
+                      self.session.beginConfiguration()
+                      self.session.inputs.forEach { self.session.removeInput($0) }
+
+                      let pos: AVCaptureDevice.Position = self.isUsingFront ? .front : .back
+                      if let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: pos),
+                         let input = try? AVCaptureDeviceInput(device: device),
+                         self.session.canAddInput(input) {
+                          self.session.addInput(input)
+                      }
+
+                      if self.session.outputs.isEmpty, self.session.canAddOutput(self.photoOutput) {
+                          self.session.addOutput(self.photoOutput)
+                      }
+                      self.session.commitConfiguration()
+                      if !self.session.isRunning { self.session.startRunning() }
+                      self.applyTorch(self.flashOn)
+                  }
+              }
+
+              func stop() {
+                  applyTorch(false)
+                  queue.async {
+                      if self.session.isRunning { self.session.stopRunning() }
+                  }
+              }
+
+              func flip() {
+                  isUsingFront.toggle()
+                  if isAuthorized { configureSession() }
+              }
+
+              func toggleFlash() {
+                  flashOn.toggle()
+                  applyTorch(flashOn)
+              }
+
+              private func applyTorch(_ on: Bool) {
+                  queue.async {
+                      let pos: AVCaptureDevice.Position = self.isUsingFront ? .front : .back
+                      guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: pos),
+                            device.hasTorch, device.isTorchAvailable else { return }
+                      try? device.lockForConfiguration()
+                      device.torchMode = on ? .on : .off
+                      device.unlockForConfiguration()
+                  }
+              }
+
+              func capturePhoto(completion: @escaping (UIImage?) -> Void) {
+                  guard isAuthorized else { completion(nil); return }
+                  photoCompletion = completion
+                  let settings = AVCapturePhotoSettings()
+                  photoOutput.capturePhoto(with: settings, delegate: self)
+              }
+
+              func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+                  let data = photo.fileDataRepresentation()
+                  let img = data.flatMap { UIImage(data: $0) }
+                  DispatchQueue.main.async {
+                      self.photoCompletion?(img)
+                      self.photoCompletion = nil
+                  }
+              }
+          }
+
+          struct CameraPreviewLayerView: UIViewRepresentable {
+              let session: AVCaptureSession
+
+              final class PreviewUIView: UIView {
+                  override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+                  var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+              }
+
+              func makeUIView(context: Context) -> PreviewUIView {
+                  let v = PreviewUIView()
+                  v.previewLayer.session = session
+                  v.previewLayer.videoGravity = .resizeAspectFill
+                  return v
+              }
+
+              func updateUIView(_ uiView: PreviewUIView, context: Context) {
+                  uiView.previewLayer.session = session
+              }
+          }
+
+          final class VoiceRecorderController: NSObject, ObservableObject, AVAudioPlayerDelegate {
+              @Published var isRecording = false
+              @Published var isStopped = false
+              @Published var levels: [CGFloat] = []
+              @Published var playFraction: CGFloat? = nil
+              @Published var duration: TimeInterval = 0
+
+              private var recorder: AVAudioRecorder?
+              private var player: AVAudioPlayer?
+              private var tickTimer: Timer?
+              private var playTimer: Timer?
+              private var startDate = Date()
+              private var fileURL: URL?
+
+              func start() {
+                  reset()
+                  isRecording = true
+                  isStopped = false
+                  startDate = Date()
+
+                  AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
+                      DispatchQueue.main.async {
+                          guard let self, self.isRecording, !self.isStopped else { return }
+                          if granted {
+                              let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".m4a")
+                              self.fileURL = url
+                              try? AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
+                              try? AVAudioSession.sharedInstance().setActive(true)
+                              let settings: [String: Any] = [
+                                  AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+                                  AVSampleRateKey: 22050,
+                                  AVNumberOfChannelsKey: 1,
+                                  AVEncoderAudioQualityKey: AVAudioQuality.medium.rawValue
+                              ]
+                              if let rec = try? AVAudioRecorder(url: url, settings: settings) {
+                                  rec.isMeteringEnabled = true
+                                  rec.record()
+                                  self.recorder = rec
+                              }
+                          }
+                      }
+                  }
+
+                  tickTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
+                      guard let self, self.isRecording, !self.isStopped else { return }
+                      let v: CGFloat
+                      if let rec = self.recorder, rec.isRecording {
+                          rec.updateMeters()
+                          let db = rec.averagePower(forChannel: 0)
+                          v = max(0.05, min(1.0, CGFloat((db + 50) / 50)))
+                      } else {
+                          let t = Date().timeIntervalSince(self.startDate)
+                          v = 0.2 + 0.8 * CGFloat.random(in: 0...1) * (0.5 + 0.5 * CGFloat(sin(t / 0.26)))
+                      }
+                      self.levels.append(v)
+                  }
+              }
+
+              func freeze() {
+                  guard isRecording, !isStopped else { return }
+                  isStopped = true
+                  duration = max(1, Date().timeIntervalSince(startDate))
+                  tickTimer?.invalidate()
+                  tickTimer = nil
+                  recorder?.stop()
+                  recorder = nil
+              }
+
+              func togglePlayPreview() {
+                  guard isStopped else { freeze(); return }
+                  playTimer?.invalidate()
+                  player?.stop()
+                  if let url = fileURL, let p = try? AVAudioPlayer(contentsOf: url) {
+                      player = p
+                      p.delegate = self
+                      p.play()
+                  }
+                  let playStart = Date()
+                  let dur = max(0.5, duration)
+                  playTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+                      guard let self else { return }
+                      let f = CGFloat(Date().timeIntervalSince(playStart) / dur)
+                      if f >= 1.0 {
+                          self.playTimer?.invalidate()
+                          self.playFraction = nil
+                      } else {
+                          self.playFraction = f
+                      }
+                  }
+              }
+
+              func buildAttachment() -> AttachmentItem {
+                  freeze()
+                  let bars: [CGFloat] = (0..<14).map { i in
+                      guard !levels.isEmpty else { return 0.2 }
+                      let idx = min(levels.count - 1, i * levels.count / 14)
+                      return levels[idx]
+                  }
+                  let item = AttachmentItem(kind: .voice(bars: bars, duration: duration, url: fileURL))
+                  fileURL = nil
+                  reset(deleteFile: false)
+                  return item
+              }
+
+              func playClip(url: URL?) {
+                  guard let url else { return }
+                  player?.stop()
+                  try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+                  try? AVAudioSession.sharedInstance().setActive(true)
+                  if let p = try? AVAudioPlayer(contentsOf: url) {
+                      player = p
+                      p.play()
+                  }
+              }
+
+              func reset(deleteFile: Bool = true) {
+                  tickTimer?.invalidate(); tickTimer = nil
+                  playTimer?.invalidate(); playTimer = nil
+                  recorder?.stop(); recorder = nil
+                  player?.stop(); player = nil
+                  if deleteFile, let url = fileURL { try? FileManager.default.removeItem(at: url) }
+                  fileURL = nil
+                  isRecording = false
+                  isStopped = false
+                  levels = []
+                  playFraction = nil
+                  duration = 0
+              }
+          }
+
+          // MARK: - 6. Composer Subviews (Gallery / Camera / Editor)
+
+          struct ComposerGalleryView: View {
+              @Binding var pickedIndices: [Int]
+              @State private var photoItems: [PhotosPickerItem] = []
+              let onBack: () -> Void
+              let onAddColors: ([[Color]]) -> Void
+              let onAddPickedImages: ([UIImage]) -> Void
+
+              private let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
+
+              var body: some View {
+                  ZStack {
+                      Color.white
+
+                      ScrollView {
+                          LazyVGrid(columns: columns, spacing: 2) {
+                              ForEach(0..<33, id: \.self) { i in
+                                  let selOrder = pickedIndices.firstIndex(of: i)
+                                  Button(action: { toggleTile(i) }) {
+                                      ZStack(alignment: .topTrailing) {
+                                          LinearGradient(colors: SampleData.galleryPalette(at: i), startPoint: .top, endPoint: .bottom)
+                                              .aspectRatio(1, contentMode: .fill)
+                                              .overlay(
+                                                  Rectangle().stroke(selOrder != nil ? Color(red: 61/255, green: 109/255, blue: 242/255) : .clear, lineWidth: 3)
+                                              )
+
+                                          ZStack {
+                                              Circle()
+                                                  .fill(selOrder != nil ? Color(red: 61/255, green: 109/255, blue: 242/255) : Color.black.opacity(0.18))
+                                                  .frame(width: 22, height: 22)
+                                                  .overlay(
+                                                      Circle().stroke(selOrder != nil ? Color.white : Color.white.opacity(0.9), lineWidth: 2)
+                                                  )
+                                              if let ord = selOrder {
+                                                  Text("\(ord + 1)")
+                                                      .font(.system(size: 12, weight: .semibold))
+                                                      .foregroundColor(.white)
+                                              }
+                                          }
+                                          .padding(6)
+                                      }
+                                  }
+                                  .buttonStyle(.plain)
+                              }
+                          }
+                          .padding(.bottom, 84)
+                      }
+                      .scrollIndicators(.hidden)
+
+                      VStack {
+                          Spacer()
+                          HStack {
+                              Button(action: onBack) {
+                                  Image(systemName: "chevron.left")
+                                      .font(.system(size: 17, weight: .bold))
+                                      .foregroundColor(.white)
+                                      .frame(width: 44, height: 44)
+                                      .background(Color(red: 36/255, green: 36/255, blue: 48/255).opacity(0.85), in: Circle())
+                                      .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+                              }
+
+                              Spacer()
+
+                              if pickedIndices.isEmpty {
+                                  PhotosPicker(selection: $photoItems, maxSelectionCount: 10, matching: .images) {
+                                      Text("Todas las fotos")
+                                          .font(.system(size: 16, weight: .semibold))
+                                          .foregroundColor(.white)
+                                          .padding(.horizontal, 24)
+                                          .frame(height: 44)
+                                          .background(Color(red: 36/255, green: 36/255, blue: 48/255).opacity(0.85), in: Capsule())
+                                          .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+                                  }
+                              } else {
+                                  Button(action: {
+                                      onAddColors(pickedIndices.map { SampleData.galleryPalette(at: $0) })
+                                  }) {
+                                      Text("Añadir (\(pickedIndices.count))")
+                                          .font(.system(size: 16, weight: .semibold))
+                                          .foregroundColor(.white)
+                                          .padding(.horizontal, 24)
+                                          .frame(height: 44)
+                                          .background(Color(red: 61/255, green: 109/255, blue: 242/255), in: Capsule())
+                                          .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+                                  }
+                              }
+                          }
+                          .padding(.horizontal, 16)
+                          .padding(.bottom, 16)
+                      }
+                  }
+                  .onChange(of: photoItems) { _, items in
+                      guard !items.isEmpty else { return }
+                      Task {
+                          var loaded: [UIImage] = []
+                          for item in items {
+                              if let data = try? await item.loadTransferable(type: Data.self),
+                                 let img = UIImage(data: data) {
+                                  loaded.append(img)
+                              }
+                          }
+                          await MainActor.run {
+                              photoItems = []
+                              if !loaded.isEmpty { onAddPickedImages(loaded) }
+                          }
+                      }
+                  }
+              }
+
+              private func toggleTile(_ i: Int) {
+                  if let idx = pickedIndices.firstIndex(of: i) {
+                      pickedIndices.remove(at: idx)
+                  } else {
+                      pickedIndices.append(i)
+                  }
+              }
+          }
+
+          struct ScanCornerBrackets: View {
+              var body: some View {
+                  GeometryReader { geo in
+                      let w = geo.size.width
+                      let h = geo.size.height
+                      let len: CGFloat = 28
+                      Path { p in
+                          p.move(to: CGPoint(x: 0, y: len)); p.addLine(to: .zero); p.addLine(to: CGPoint(x: len, y: 0))
+                          p.move(to: CGPoint(x: w - len, y: 0)); p.addLine(to: CGPoint(x: w, y: 0)); p.addLine(to: CGPoint(x: w, y: len))
+                          p.move(to: CGPoint(x: 0, y: h - len)); p.addLine(to: CGPoint(x: 0, y: h)); p.addLine(to: CGPoint(x: len, y: h))
+                          p.move(to: CGPoint(x: w - len, y: h)); p.addLine(to: CGPoint(x: w, y: h)); p.addLine(to: CGPoint(x: w, y: h - len))
+                      }
+                      .stroke(Color.white.opacity(0.9), lineWidth: 3)
+                  }
+                  .padding(.horizontal, 44)
+                  .padding(.top, 90)
+                  .padding(.bottom, 180)
+              }
+          }
+
+          struct ComposerCameraView: View {
+              @StateObject private var cam = CameraController()
+              @State private var showMore = false
+              @State private var scanMode = false
+              @State private var flashPulse = false
+
+              let onClose: () -> Void
+              let onCapture: (UIImage?) -> Void
+
+              var body: some View {
+                  ZStack {
+                      if cam.isAuthorized {
+                          CameraPreviewLayerView(session: cam.session)
+                      } else {
+                          LinearGradient(
+                              colors: [Color(red: 217/255, green: 214/255, blue: 208/255), Color(red: 207/255, green: 196/255, blue: 176/255), Color(red: 185/255, green: 171/255, blue: 146/255)],
+                              startPoint: .top, endPoint: .bottom
+                          )
+                          .overlay(alignment: .top) {
+                              Text("Camera preview")
+                                  .font(.system(size: 12))
+                                  .foregroundColor(Color.black.opacity(0.45))
+                                  .padding(.top, 24)
+                          }
+                      }
+
+                      if scanMode {
+                          ScanCornerBrackets()
+                              .transition(.opacity)
+                      }
+
+                      if flashPulse {
+                          Color.white.opacity(0.85)
+                              .ignoresSafeArea()
+                              .transition(.opacity)
+                      }
+
+                      VStack {
+                          Spacer()
+                          HStack(alignment: .bottom) {
+                              Button(action: onClose) {
+                                  Image(systemName: "chevron.left")
+                                      .font(.system(size: 18, weight: .bold))
+                                      .foregroundColor(.white)
+                                      .frame(width: 46, height: 46)
+                                      .background(Color(red: 40/255, green: 36/255, blue: 30/255).opacity(0.6), in: Circle())
+                              }
+                              .padding(.bottom, 14)
+
+                              Spacer()
+
+                              Button(action: takePhoto) {
+                                  ZStack {
+                                      Circle()
+                                          .stroke(Color.white.opacity(0.75), lineWidth: 2.5)
+                                          .frame(width: 74, height: 74)
+                                      Circle()
+                                          .fill(Color.white)
+                                          .frame(width: 58, height: 58)
+                                  }
+                              }
+
+                              Spacer()
+
+                              VStack(spacing: 12) {
+                                  if showMore {
+                                      camOptionButton(icon: "doc.viewfinder", active: scanMode) {
+                                          withAnimation { scanMode.toggle() }
+                                      }
+                                      camOptionButton(icon: cam.flashOn ? "bolt.fill" : "bolt.slash", active: cam.flashOn) {
+                                          cam.toggleFlash()
+                                      }
+                                      camOptionButton(icon: "arrow.triangle.2.circlepath", active: false) {
+                                          cam.flip()
+                                      }
+                                  }
+
+                                  Button(action: { withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) { showMore.toggle() } }) {
+                                      Image(systemName: showMore ? "xmark" : "ellipsis")
+                                          .font(.system(size: 18, weight: .bold))
+                                          .foregroundColor(.white)
+                                          .frame(width: 46, height: 46)
+                                          .background(Color(red: 40/255, green: 36/255, blue: 30/255).opacity(0.6), in: Circle())
+                                  }
+                              }
+                              .padding(.bottom, 14)
+                          }
+                          .padding(.horizontal, 26)
+                          .padding(.bottom, 18)
+                      }
+                  }
+                  .background(Color.black)
+                  .onAppear { cam.start() }
+                  .onDisappear { cam.stop() }
+              }
+
+              @ViewBuilder
+              private func camOptionButton(icon: String, active: Bool, action: @escaping () -> Void) -> some View {
+                  Button(action: action) {
+                      Image(systemName: icon)
+                          .font(.system(size: 18, weight: .medium))
+                          .foregroundColor(active ? Color(white: 0.1) : .white)
+                          .frame(width: 46, height: 46)
+                          .background(active ? Color.white.opacity(0.92) : Color(red: 40/255, green: 36/255, blue: 30/255).opacity(0.6), in: Circle())
+                  }
+                  .transition(.scale(scale: 0.7).combined(with: .opacity))
+              }
+
+              private func takePhoto() {
+                  withAnimation(.easeOut(duration: 0.12)) { flashPulse = true }
+                  cam.capturePhoto { img in
+                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                          flashPulse = false
+                          onCapture(img)
                       }
                   }
               }
           }
 
-          // MARK: - 5. Bottom Sheet View
+          struct ComposerEditorView: View {
+              @Binding var sheetDetent: PresentationDetent
+              let onClose: () -> Void
 
-          struct FlightySheetView: View {
-              @State private var showSearch = false
+              @State private var mode: ComposerViewMode = .editor
+              @State private var bodyText = ""
+              @State private var titleText = ""
+              @State private var attachments: [AttachmentItem] = []
+              @State private var galleryPicked: [Int] = []
+              @StateObject private var recorder = VoiceRecorderController()
+              @FocusState private var focusedField: Field?
+
+              private enum Field { case body, title }
 
               var body: some View {
-                  VStack(spacing: 0) {
-                      // Header
-                      HStack(alignment: .center) {
-                          Text("My Flights")
-                              .font(.system(size: 34, weight: .bold))
-                              .foregroundColor(.black)
-
-                          Spacer()
-
-                          HStack(spacing: 10) {
-                              Button(action: {}) {
-                                  Image(systemName: "square.and.arrow.up")
-                                      .font(.system(size: 17, weight: .semibold))
+                  ZStack {
+                      VStack(spacing: 0) {
+                          // Top toolbar
+                          HStack(spacing: 11) {
+                              Button(action: closeAll) {
+                                  Image(systemName: "chevron.left")
+                                      .font(.system(size: 18, weight: .semibold))
                                       .foregroundColor(.black)
                                       .frame(width: 44, height: 44)
+                                      .flightyGlass(in: Circle(), fallback: Color.white)
+                              }
+
+                              Spacer()
+
+                              HStack(spacing: 24) {
+                                  Button(action: {}) {
+                                      Text("Aa").font(.system(size: 21, weight: .medium)).foregroundColor(.black)
+                                  }
+                                  Button(action: {}) {
+                                      Image(systemName: "pencil.tip.crop.circle").font(.system(size: 20)).foregroundColor(.black)
+                                  }
+                                  Button(action: {}) {
+                                      Image(systemName: "ellipsis").font(.system(size: 18, weight: .bold)).foregroundColor(.black)
+                                  }
+                              }
+                              .padding(.horizontal, 20)
+                              .frame(height: 44)
+                              .background(Color.white, in: Capsule())
+                              .shadow(color: .black.opacity(0.10), radius: 9, y: 2)
+
+                              Button(action: closeAll) {
+                                  Image(systemName: "checkmark")
+                                      .font(.system(size: 18, weight: .bold))
+                                      .foregroundColor(.white)
+                                      .frame(width: 44, height: 44)
+                                      .background(SampleData.composerPurple, in: Circle())
+                                      .shadow(color: SampleData.composerPurple.opacity(0.35), radius: 8, y: 4)
+                              }
+                          }
+                          .padding(.horizontal, 16)
+                          .padding(.top, 14)
+
+                          // Text body + lifting Title
+                          VStack(alignment: .leading, spacing: 0) {
+                              ZStack(alignment: .topLeading) {
+                                  if bodyText.isEmpty {
+                                      Text("Empieza a escribir...")
+                                          .font(.system(size: 16))
+                                          .foregroundColor(Color(red: 154/255, green: 154/255, blue: 160/255))
+                                          .padding(.top, 8)
+                                          .padding(.leading, 4)
+                                  }
+                                  TextEditor(text: $bodyText)
+                                      .font(.system(size: 16))
+                                      .scrollContentBackground(.hidden)
+                                      .focused($focusedField, equals: .body)
+                              }
+                              .frame(maxHeight: focusedField == .title ? (bodyText.isEmpty ? 36 : 120) : .infinity)
+                              .animation(.spring(response: 0.28, dampingFraction: 0.85), value: focusedField)
+
+                              Divider().opacity(0.45)
+
+                              TextField("Título", text: $titleText)
+                                  .font(.system(size: 16, weight: .bold))
+                                  .foregroundColor(.black)
+                                  .padding(.top, 10)
+                                  .focused($focusedField, equals: .title)
+
+                              if focusedField == .title {
+                                  Spacer(minLength: 0)
+                              }
+                          }
+                          .padding(.horizontal, 24)
+                          .padding(.top, 18)
+                          .padding(.bottom, 12)
+
+                          // Bottom composer pill (attachments + tools or voice recorder)
+                          VStack(spacing: 4) {
+                              if !attachments.isEmpty {
+                                  ScrollView(.horizontal, showsIndicators: false) {
+                                      HStack(spacing: 8) {
+                                          ForEach(attachments) { att in
+                                              attachmentChip(att)
+                                          }
+                                      }
+                                      .padding(.horizontal, 8)
+                                      .padding(.top, 10)
+                                      .padding(.bottom, 4)
+                                  }
+                              }
+
+                              if recorder.isRecording {
+                                  voiceRecorderRow
+                              } else {
+                                  toolRow
+                              }
+                          }
+                          .background(Color.white, in: RoundedRectangle(cornerRadius: 23, style: .continuous))
+                          .shadow(color: .black.opacity(0.10), radius: 10, y: 2)
+                          .padding(.horizontal, 14)
+                          .padding(.bottom, 18)
+                      }
+                      .background(Color.white)
+
+                      if mode == .gallery {
+                          ComposerGalleryView(
+                              pickedIndices: $galleryPicked,
+                              onBack: {
+                                  mode = .editor
+                                  sheetDetent = .large
+                              },
+                              onAddColors: { palettes in
+                                  for p in palettes {
+                                      attachments.append(AttachmentItem(kind: .image(uiImage: nil, gradient: p)))
+                                  }
+                                  galleryPicked = []
+                                  mode = .editor
+                                  sheetDetent = .large
+                              },
+                              onAddPickedImages: { images in
+                                  for img in images {
+                                      attachments.append(AttachmentItem(kind: .image(uiImage: img, gradient: [])))
+                                  }
+                                  galleryPicked = []
+                                  mode = .editor
+                                  sheetDetent = .large
+                              }
+                          )
+                          .transition(.opacity)
+                      }
+
+                      if mode == .camera {
+                          ComposerCameraView(
+                              onClose: { mode = .editor },
+                              onCapture: { img in
+                                  let fallback = [Color(red: 217/255, green: 214/255, blue: 208/255), Color(red: 207/255, green: 196/255, blue: 176/255), Color(red: 185/255, green: 171/255, blue: 146/255)]
+                                  attachments.append(AttachmentItem(kind: .image(uiImage: img, gradient: fallback)))
+                                  mode = .editor
+                              }
+                          )
+                          .transition(.opacity)
+                      }
+                  }
+                  .onDisappear { recorder.reset() }
+              }
+
+              private var toolRow: some View {
+                  HStack {
+                      toolBtn(icon: "wand.and.stars") {}
+                      Spacer()
+                      toolBtn(icon: "photo.on.rectangle") {
+                          galleryPicked = []
+                          mode = .gallery
+                          sheetDetent = .height(479)
+                      }
+                      Spacer()
+                      toolBtn(icon: "camera") {
+                          focusedField = nil
+                          mode = .camera
+                      }
+                      Spacer()
+                      toolBtn(icon: "waveform") {
+                          focusedField = nil
+                          recorder.start()
+                      }
+                      Spacer()
+                      toolBtn(icon: "location") {}
+                      Spacer()
+                      toolBtn(icon: "sparkles") {}
+                  }
+                  .padding(.horizontal, 18)
+                  .frame(height: 46)
+              }
+
+              private var voiceRecorderRow: some View {
+                  HStack(spacing: 10) {
+                      Button(action: { recorder.reset() }) {
+                          Image(systemName: "xmark")
+                              .font(.system(size: 13, weight: .bold))
+                              .foregroundColor(.black)
+                              .frame(width: 36, height: 36)
+                              .background(Color(red: 239/255, green: 239/255, blue: 241/255), in: Circle())
+                      }
+
+                      HStack(spacing: 0) {
+                          ForEach(0..<34, id: \.self) { i in
+                              let val: CGFloat? = {
+                                  let idx = recorder.levels.count - 34 + i
+                                  guard idx >= 0, idx < recorder.levels.count else { return nil }
+                                  return recorder.levels[idx]
+                              }()
+                              let dimmed = recorder.playFraction.map { CGFloat(i) / 34.0 > $0 } ?? false
+                              RoundedRectangle(cornerRadius: 2)
+                                  .fill(val == nil ? Color(red: 212/255, green: 212/255, blue: 217/255) : (dimmed ? Color(red: 180/255, green: 180/255, blue: 186/255) : Color(red: 44/255, green: 44/255, blue: 46/255)))
+                                  .frame(width: 4, height: val.map { 4 + $0 * 20 } ?? 4)
+                              if i < 33 { Spacer(minLength: 1) }
+                          }
+                      }
+                      .frame(height: 36)
+
+                      Button(action: { recorder.togglePlayPreview() }) {
+                          Image(systemName: recorder.isStopped ? "play.fill" : "stop.fill")
+                              .font(.system(size: 12, weight: .bold))
+                              .foregroundColor(.black)
+                              .frame(width: 36, height: 36)
+                              .background(Color(red: 239/255, green: 239/255, blue: 241/255), in: Circle())
+                      }
+
+                      Button(action: {
+                          attachments.append(recorder.buildAttachment())
+                      }) {
+                          Image(systemName: "arrow.up")
+                              .font(.system(size: 15, weight: .bold))
+                              .foregroundColor(.white)
+                              .frame(width: 36, height: 36)
+                              .background(Color(red: 61/255, green: 109/255, blue: 242/255), in: Circle())
+                      }
+                  }
+                  .padding(.horizontal, 6)
+                  .frame(height: 46)
+              }
+
+              @ViewBuilder
+              private func attachmentChip(_ att: AttachmentItem) -> some View {
+                  ZStack(alignment: .topTrailing) {
+                      switch att.kind {
+                      case .image(let img, let grad):
+                          Group {
+                              if let img {
+                                  Image(uiImage: img).resizable().scaledToFill()
+                              } else {
+                                  LinearGradient(colors: grad, startPoint: .top, endPoint: .bottom)
+                              }
+                          }
+                          .frame(width: 64, height: 64)
+                          .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                      case .voice(let bars, let dur, let url):
+                          Button(action: { recorder.playClip(url: url) }) {
+                              HStack(spacing: 10) {
+                                  Circle()
+                                      .fill(Color(red: 61/255, green: 109/255, blue: 242/255))
+                                      .frame(width: 30, height: 30)
+                                      .overlay(Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white))
+
+                                  HStack(spacing: 2) {
+                                      ForEach(Array(bars.enumerated()), id: \.offset) { _, v in
+                                          RoundedRectangle(cornerRadius: 1.5)
+                                              .fill(Color(white: 0.56))
+                                              .frame(width: 3, height: 3 + v * 14)
+                                      }
+                                  }
+
+                                  Text(formatDuration(dur))
+                                      .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                                      .foregroundColor(Color(white: 0.23))
+                              }
+                              .padding(.leading, 12)
+                              .padding(.trailing, 28)
+                              .frame(height: 64)
+                              .background(Color(red: 242/255, green: 242/255, blue: 247/255), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                          }
+                          .buttonStyle(.plain)
+                      }
+
+                      Button(action: {
+                          attachments.removeAll { $0.id == att.id }
+                      }) {
+                          Image(systemName: "xmark")
+                              .font(.system(size: 9, weight: .bold))
+                              .foregroundColor(.white)
+                              .frame(width: 22, height: 22)
+                              .background(Color(red: 36/255, green: 36/255, blue: 48/255).opacity(0.75), in: Circle())
+                      }
+                      .padding(5)
+                  }
+              }
+
+              private func toolBtn(icon: String, action: @escaping () -> Void) -> some View {
+                  Button(action: action) {
+                      Image(systemName: icon)
+                          .font(.system(size: 20, weight: .regular))
+                          .foregroundColor(.black)
+                          .frame(width: 34, height: 46)
+                  }
+                  .buttonStyle(.plain)
+              }
+
+              private func formatDuration(_ s: TimeInterval) -> String {
+                  let total = max(1, Int(s.rounded()))
+                  return "\(total / 60):\(String(format: "%02d", total % 60))"
+              }
+
+              private func closeAll() {
+                  recorder.reset()
+                  focusedField = nil
+                  onClose()
+              }
+          }
+
+          // MARK: - 7. Bottom Sheet View
+
+          struct FlightySheetView: View {
+              @Binding var sheetDetent: PresentationDetent
+
+              @State private var currentTab: MainTab = .world
+              @State private var posts = SampleData.initialPosts
+              @State private var friends = SampleData.initialFriends
+              @State private var chatFilter: ChatFilter = .all
+              @State private var friendsFeedMode = false
+              @State private var pinsFriendsMode = false
+
+              @State private var isEditing = false
+              @State private var activeChatIndex: Int? = nil
+              @State private var detentBeforeModal: PresentationDetent = .height(264)
+
+              private var friendNames: Set<String> { Set(friends.map { $0.name }) }
+
+              var body: some View {
+                  ZStack {
+                      VStack(spacing: 0) {
+                          // Header
+                          HStack(alignment: .center) {
+                              Text(currentTab.title)
+                                  .font(.system(size: 34, weight: .bold))
+                                  .foregroundColor(.black)
+
+                              Spacer()
+
+                              HStack(spacing: 10) {
+                                  if currentTab == .friends || currentTab == .pins {
+                                      let swapOn = currentTab == .friends ? friendsFeedMode : pinsFriendsMode
+                                      Button(action: toggleSwap) {
+                                          Image(systemName: "arrow.left.arrow.right")
+                                              .font(.system(size: 17, weight: .semibold))
+                                              .foregroundColor(swapOn ? .white : .black)
+                                              .frame(width: 44, height: 44)
+                                              .background(swapOn ? SampleData.brandBlue : Color(white: 0.98), in: Circle())
+                                              .shadow(color: .black.opacity(0.10), radius: 4, y: 2)
+                                      }
+                                  }
+
+                                  Button(action: {}) {
+                                      Image(systemName: "magnifyingglass")
+                                          .font(.system(size: 18, weight: .semibold))
+                                          .foregroundColor(.black)
+                                          .frame(width: 44, height: 44)
+                                          .flightyGlass(in: Circle(), fallback: Color(white: 0.98))
+                                  }
+
+                                  Button(action: {}) {
+                                      FlightyAvatar()
+                                  }
+                              }
+                          }
+                          .padding(.horizontal, 20)
+                          .padding(.top, 14)
+
+                          // Friends filter row
+                          if currentTab == .friends {
+                              HStack(spacing: 4) {
+                                  segButton("Everyone", selected: chatFilter == .all) { chatFilter = .all }
+                                  segButton("Today", selected: chatFilter == .today) { chatFilter = .today }
+
+                                  Button(action: {}) {
+                                      HStack(spacing: 8) {
+                                          Image(systemName: "plus")
+                                              .font(.system(size: 13, weight: .bold))
+                                              .foregroundColor(.white)
+                                              .frame(width: 28, height: 28)
+                                              .background(SampleData.brandBlue, in: Circle())
+                                          Text("Add Friend")
+                                              .font(.system(size: 17, weight: .medium))
+                                              .foregroundColor(SampleData.brandBlue)
+                                      }
+                                      .padding(.leading, 8)
+                                  }
+                                  .buttonStyle(.plain)
+                                  Spacer()
+                              }
+                              .padding(.horizontal, 20)
+                              .padding(.top, 10)
+                              .padding(.bottom, 6)
+                          }
+
+                          // Tab content
+                          ScrollView {
+                              LazyVStack(spacing: 0) {
+                                  contentList
+                              }
+                              .padding(.horizontal, 20)
+                              .padding(.bottom, 10)
+                          }
+                          .scrollIndicators(.hidden)
+                          .scrollDisabled(sheetDetent != .large)
+
+                          // Bottom dock
+                          HStack(spacing: 8) {
+                              HStack(spacing: 0) {
+                                  FlightyTab(title: "World", selected: currentTab == .world, action: { currentTab = .world }) {
+                                      FlightyAirplaneIcon(selected: currentTab == .world)
+                                  }
+                                  FlightyTab(title: "Friends", selected: currentTab == .friends, action: { currentTab = .friends }) {
+                                      FlightyFriendsIcon(selected: currentTab == .friends)
+                                  }
+                                  FlightyTab(title: "Pins", selected: currentTab == .pins, action: { currentTab = .pins }) {
+                                      FlightyPassportIcon(selected: currentTab == .pins)
+                                  }
+                              }
+                              .padding(4)
+                              .frame(height: 62)
+                              .flightyGlass(in: Capsule(), fallback: Color(white: 0.97))
+
+                              Button(action: openEditor) {
+                                  Image(systemName: "plus")
+                                      .font(.system(size: 22, weight: .semibold))
+                                      .foregroundColor(.black)
+                                      .frame(width: 62, height: 62)
                                       .flightyGlass(in: Circle(), fallback: Color(white: 0.97))
                               }
-
-                              Button(action: {}) {
-                                  FlightyAvatar()
-                              }
                           }
+                          .padding(.horizontal, 18)
+                          .padding(.bottom, 18)
                       }
-                      .padding(.horizontal, 20)
-                      .padding(.top, 14)
+                      .opacity((isEditing || activeChatIndex != nil) ? 0 : 1)
 
-                      Spacer()
-
-                      // Sync status
-                      VStack(spacing: 4) {
-                          Text("Syncing...")
-                              .font(.system(size: 16, weight: .semibold))
-                              .foregroundColor(Color(white: 0.55))
-                          Text("Restoring your flights")
-                              .font(.system(size: 15))
-                              .foregroundColor(Color(white: 0.62))
+                      if isEditing {
+                          ComposerEditorView(sheetDetent: $sheetDetent, onClose: closeEditor)
+                              .transition(.opacity)
                       }
-                      .padding(.top, 8)
 
-                      Spacer()
-
-                      // Bottom dock
-                      HStack(spacing: 8) {
-                          HStack(spacing: 0) {
-                              FlightyTab(title: "My Flights", selected: true) {
-                                  FlightyAirplaneIcon()
-                              }
-                              FlightyTab(title: "Friends", selected: false) {
-                                  FlightyFriendsIcon()
-                              }
-                              FlightyTab(title: "Passport", selected: false) {
-                                  FlightyPassportIcon()
-                              }
-                          }
-                          .padding(4)
-                          .frame(height: 62)
-                          .flightyGlass(in: Capsule(), fallback: Color(white: 0.97))
-
-                          // Tapping this opens Apple's search input bar
-                          Button(action: { showSearch = true }) {
-                              Image(systemName: "magnifyingglass")
-                                  .font(.system(size: 20, weight: .semibold))
-                                  .foregroundColor(.black)
-                                  .frame(width: 62, height: 62)
-                                  .flightyGlass(in: Circle(), fallback: Color(white: 0.97))
-                          }
+                      if let idx = activeChatIndex {
+                          ChatDetailView(friend: $friends[idx], onBack: closeChat)
+                              .transition(.opacity)
                       }
-                      .padding(.horizontal, 18)
-                      .padding(.bottom, 18)
                   }
                   .frame(maxWidth: .infinity, maxHeight: .infinity)
                   .background(Color.white)
                   .ignoresSafeArea(edges: .bottom)
                   .persistentSystemOverlays(.hidden)
-                  .sheet(isPresented: $showSearch) {
-                      FlightySearchView()
-                          .presentationDetents([.large])
-                          .presentationDragIndicator(.visible)
+              }
+
+              @ViewBuilder
+              private var contentList: some View {
+                  switch currentTab {
+                  case .world:
+                      ForEach($posts) { $post in
+                          PostRowView(post: $post)
+                          Divider().opacity(0.45)
+                      }
+
+                  case .friends:
+                      if friendsFeedMode {
+                          ForEach($posts) { $post in
+                              if friendNames.contains(post.name) {
+                                  PostRowView(post: $post)
+                                  Divider().opacity(0.45)
+                              }
+                          }
+                      } else {
+                          let filteredIndices = friends.indices.filter { idx in
+                              chatFilter == .all || friends[idx].time.hasSuffix("AM") || friends[idx].time.hasSuffix("PM")
+                          }
+                          if filteredIndices.isEmpty {
+                              Text("No chats today")
+                                  .font(.system(size: 15))
+                                  .foregroundColor(Color(white: 0.6))
+                                  .padding(.vertical, 40)
+                          } else {
+                              ForEach(filteredIndices, id: \.self) { idx in
+                                  Button(action: { openChat(idx) }) {
+                                      ChatRowView(friend: friends[idx])
+                                  }
+                                  .buttonStyle(.plain)
+                                  Divider().opacity(0.45)
+                              }
+                          }
+                      }
+
+                  case .pins:
+                      if pinsFriendsMode {
+                          ForEach(friends) { friend in
+                              HStack(spacing: 12) {
+                                  Circle()
+                                      .fill(friend.color)
+                                      .frame(width: 46, height: 46)
+                                      .overlay(Text(String(friend.name.prefix(1))).font(.system(size: 18, weight: .semibold)).foregroundColor(.white))
+                                  VStack(alignment: .leading, spacing: 2) {
+                                      HStack {
+                                          Text(friend.name).font(.system(size: 16, weight: .semibold)).foregroundColor(.black)
+                                          Spacer()
+                                          Text("🌍").font(.system(size: 13))
+                                      }
+                                      Text("\(friend.countries) countries").font(.system(size: 14)).foregroundColor(Color(white: 0.56))
+                                  }
+                              }
+                              .padding(.vertical, 10)
+                              Divider().opacity(0.45)
+                          }
+                      } else {
+                          Text("Pins go here")
+                              .font(.system(size: 15))
+                              .foregroundColor(Color(white: 0.6))
+                              .padding(.vertical, 40)
+                      }
                   }
+              }
+
+              @ViewBuilder
+              private func segButton(_ label: String, selected: Bool, action: @escaping () -> Void) -> some View {
+                  Button(action: action) {
+                      Text(label)
+                          .font(.system(size: 15, weight: .medium))
+                          .foregroundColor(selected ? .black : Color(white: 0.56))
+                          .padding(.horizontal, 14)
+                          .padding(.vertical, 9)
+                          .background(selected ? Color(white: 0.98) : Color.clear, in: Capsule())
+                          .shadow(color: selected ? .black.opacity(0.09) : .clear, radius: 6, y: 2)
+                  }
+                  .buttonStyle(.plain)
+              }
+
+              private func toggleSwap() {
+                  if currentTab == .friends { friendsFeedMode.toggle() }
+                  else if currentTab == .pins { pinsFriendsMode.toggle() }
+              }
+
+              private func openEditor() {
+                  detentBeforeModal = sheetDetent
+                  withAnimation(.easeInOut(duration: 0.2)) { isEditing = true }
+                  sheetDetent = .large
+              }
+
+              private func closeEditor() {
+                  withAnimation(.easeInOut(duration: 0.2)) { isEditing = false }
+                  sheetDetent = detentBeforeModal
+              }
+
+              private func openChat(_ idx: Int) {
+                  detentBeforeModal = sheetDetent
+                  friends[idx].unread = false
+                  withAnimation(.easeInOut(duration: 0.2)) { activeChatIndex = idx }
+                  sheetDetent = .large
+              }
+
+              private func closeChat() {
+                  withAnimation(.easeInOut(duration: 0.2)) { activeChatIndex = nil }
+                  sheetDetent = detentBeforeModal
               }
           }
 
-          // MARK: - 6. Main App Entry
+          // MARK: - 8. Main App Entry
 
           @main
           struct GlobeApp: App {
               @State private var showSheet = true
-              @State private var sheetDetent: PresentationDetent = .height(272)
+              @State private var sheetDetent: PresentationDetent = .height(264)
+              @State private var mapMenuOpen = false
+              @State private var mapStyle: MapStyleKind = .standard
+              @State private var selectedLayers: Set<MapLayerKind> = [.flights]
 
-              private let darkGlass = Color(red: 0.10, green: 0.14, blue: 0.20).opacity(0.85)
+              private let darkGlass = Color(red: 28/255, green: 32/255, blue: 46/255).opacity(0.65)
+              private var controlsOpacity: Double { sheetDetent == .large ? 0 : 1 }
 
               var body: some Scene {
                   WindowGroup {
                       ZStack(alignment: .topTrailing) {
                           Map()
-                              .mapStyle(.hybrid(elevation: .realistic))
+                              .mapStyle(mapStyle == .satellite ? .hybrid(elevation: .realistic) : .standard(elevation: .realistic))
                               .ignoresSafeArea()
+                              .onTapGesture {
+                                  if mapMenuOpen { withAnimation(.spring(response: 0.22)) { mapMenuOpen = false } }
+                              }
 
-                          // Top-right floating controls
-                          VStack(spacing: 8) {
+                          VStack(alignment: .trailing, spacing: 8) {
                               VStack(spacing: 0) {
-                                  Button(action: {}) {
+                                  Button(action: {
+                                      withAnimation(.spring(response: 0.22, dampingFraction: 0.85)) { mapMenuOpen.toggle() }
+                                  }) {
                                       Image(systemName: "map.fill")
                                           .font(.system(size: 18, weight: .medium))
                                           .foregroundColor(.white)
                                           .frame(width: 43, height: 40)
+                                          .background(mapMenuOpen ? Color.white.opacity(0.2) : .clear, in: Capsule())
                                   }
                                   Button(action: {}) {
                                       Image(systemName: "cloud")
@@ -479,17 +1887,28 @@ jobs:
                           .environment(\.colorScheme, .dark)
                           .padding(.top, 22)
                           .padding(.trailing, 16)
+                          .opacity(controlsOpacity)
+                          .allowsHitTesting(controlsOpacity > 0.5 && !mapMenuOpen)
+
+                          if mapMenuOpen && controlsOpacity > 0.5 {
+                              MapStyleMenu(mapStyle: $mapStyle, selectedLayers: $selectedLayers) {
+                                  withAnimation(.spring(response: 0.2)) { mapMenuOpen = false }
+                              }
+                              .padding(.top, 22)
+                              .padding(.trailing, 16)
+                              .transition(.scale(scale: 0.85, anchor: .topTrailing).combined(with: .opacity))
+                          }
                       }
                       .persistentSystemOverlays(.hidden)
                       .sheet(isPresented: $showSheet) {
-                          FlightySheetView()
+                          FlightySheetView(sheetDetent: $sheetDetent)
                               .presentationDetents(
-                                  [.height(272), .fraction(0.6), .large],
+                                  [.height(264), .height(479), .large],
                                   selection: $sheetDetent
                               )
                               .interactiveDismissDisabled(true)
                               .presentationDragIndicator(.hidden)
-                              .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.6)))
+                              .presentationBackgroundInteraction(.enabled(upThrough: .height(479)))
                               .presentationCornerRadius(42)
                               .presentationBackground(Color.white)
                       }
@@ -519,6 +1938,12 @@ jobs:
               <string>1</string>
               <key>MinimumOSVersion</key>
               <string>17.0</string>
+              <key>NSCameraUsageDescription</key>
+              <string>Camera access is used to attach photos to your posts.</string>
+              <key>NSMicrophoneUsageDescription</key>
+              <string>Microphone access is used to record voice notes.</string>
+              <key>NSPhotoLibraryUsageDescription</key>
+              <string>Photo library access is used to attach photos.</string>
               <key>UILaunchScreen</key>
               <dict/>
               <key>UISupportedInterfaceOrientations</key>
@@ -532,7 +1957,7 @@ jobs:
       - name: Compile App Binary
         run: |
           SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
-          swiftc -sdk "$SDK_PATH" -target arm64-apple-ios17.0 -parse-as-library -framework SwiftUI -framework MapKit -framework UIKit App.swift -o GlobeApp
+          swiftc -sdk "$SDK_PATH" -target arm64-apple-ios17.0 -parse-as-library -framework SwiftUI -framework MapKit -framework UIKit -framework AVFoundation -framework PhotosUI App.swift -o GlobeApp
 
       - name: Package into IPA
         run: |
